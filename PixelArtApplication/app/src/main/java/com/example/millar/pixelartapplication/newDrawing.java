@@ -11,6 +11,8 @@ public class newDrawing extends AppCompatActivity {
     Button createButton;
     EditText width;
     EditText height;
+    ColorPicker colorPicker;
+    SVBar svBar;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -21,6 +23,11 @@ public class newDrawing extends AppCompatActivity {
         createButton = findViewById(R.id.create);
         width = findViewById(R.id.width);
         height = findViewById(R.id.height);
+        colorPicker = findViewById(R.id.picker2);
+        svBar = findViewById(R.id.SVBar2);
+
+        colorPicker.addSVBar(svBar);
+
 
         // createButton functionality
         createButton.setOnClickListener(new View.OnClickListener() {
@@ -31,8 +38,10 @@ public class newDrawing extends AppCompatActivity {
                 int width_int = (!width.getText().toString().equals("")) ? Integer.parseInt(width.getText().toString()) : 0;
                 int height_int = (!height.getText().toString().equals("")) ? Integer.parseInt(height.getText().toString()) : 0;
 
+                drawing.putExtra("Loading", false);
                 drawing.putExtra("Width", width_int);
                 drawing.putExtra("Height", height_int);
+                drawing.putExtra("backgroundColour", colorPicker.getColor());
 
                 startActivity(drawing);
             }

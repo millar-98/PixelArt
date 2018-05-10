@@ -13,10 +13,14 @@ import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.PopupWindow;
 import android.widget.SeekBar;
 
+import java.io.BufferedReader;
+import java.io.FileInputStream;
+import java.io.InputStreamReader;
 import java.lang.Math;
 
 import java.util.ArrayList;
@@ -29,6 +33,7 @@ public class Drawing extends AppCompatActivity {
     // Views
     SeekBar zoomBar;
     FloatingActionButton colourPickerButton;
+    FloatingActionButton saveButton;
 
     // Colour options
     int colour;
@@ -36,6 +41,8 @@ public class Drawing extends AppCompatActivity {
     // Drawing objects
     ArrayList drawQueue;
     Pixels pixels;
+    boolean saved;
+    String fileName;
 
     // Drawing/panning variables
     long firstTouchTime;
@@ -55,26 +62,38 @@ public class Drawing extends AppCompatActivity {
         previousCoord = new float[2];
         lastDrawn = null;
 
-        // Get passed parameters
-        Bundle parameters = getIntent().getExtras();
-        final int width = parameters.getInt("Width");
-        final int height = parameters.getInt("Height");
-
         // Find views
         mainLayout = findViewById(R.id.mainLayout);
         Canvas = findViewById(R.id.layout);
         zoomBar = findViewById(R.id.zoom);
         zoomBar.setMax(200);
         colourPickerButton = findViewById(R.id.colourPickerButton);
+        saveButton = findViewById(R.id.save);
 
         // Work out screen size
         Display display = getWindowManager().getDefaultDisplay();
         Point size = new Point();
         display.getSize(size);
 
-        // Create pixels
-        pixels = new Pixels(this, width, height, size);
-        Canvas.addView(pixels);
+        // Get passed parameters
+        Bundle parameters = getIntent().getExtras();
+        boolean loading = parameters.getBoolean("Loading");
+        if(!loading) {
+            saved = false;
+            final int width = parameters.getInt("Width");
+            final int height = parameters.getInt("Height");
+            int backgroundColour = parameters.getInt("backgroundColour");
+
+            // Create pixels
+            pixels = new Pixels(this, width, height, size, backgroundColour);
+            Canvas.addView(pixels);
+        }
+        else {
+            saved = true;
+            fileName = parameters.getString("FileName");
+            pixels = new Pixels(this, fileName, size);
+            Canvas.addView(pixels);
+        }
 
         // pixels onTouchListener
         pixels.setOnTouchListener(new View.OnTouchListener() {
@@ -198,7 +217,7 @@ public class Drawing extends AppCompatActivity {
             public void onClick(View view) {
                 // Create popup window
                 LayoutInflater inflater = (LayoutInflater) Drawing.this.getSystemService(LAYOUT_INFLATER_SERVICE);
-                final View customView = inflater.inflate(R.layout.popup_window, null);
+                final View customView = inflater.inflate(R.layout.colour_picker_popup_window, null);
                 final PopupWindow popupWindow = new PopupWindow(customView, 1000, 1500, true);
 
                 // Find views
@@ -233,11 +252,42 @@ public class Drawing extends AppCompatActivity {
                 popupWindow.showAtLocation(mainLayout, Gravity.CENTER, 0, 0);
             }
         });
+
+
+        saveButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                if(!saved) {
+                    LayoutInflater inflater = (LayoutInflater) Drawing.this.getSystemService(LAYOUT_INFLATER_SERVICE);
+                    final View customView = inflater.inflate(R.layout.save_popup_window, null);
+                    final PopupWindow popupWindow = new PopupWindow(customView, 1000, 1500, true);
+
+                    final EditText fileNameEdit = customView.findViewById(R.id.popup_file_name);
+                    final Button save = customView.findViewById(R.id.popup_save);
+
+                    save.setOnClickListener(new View.OnClickListener() {
+                        @Override
+                        public void onClick(View view) {
+                            String fileNameText = fileNameEdit.getText().toString();
+                            if (!fileNameText.equals("")) {
+                                pixels.save(fileNameText);
+                                fileName = fileNameText;
+                                saved = true;
+                                popupWindow.dismiss();
+                            }
+                        }
+                    });
+
+                    popupWindow.showAtLocation(mainLayout, Gravity.CENTER, 0, 0);
+                }
+                else {
+                    pixels.save(fileName);
+                }
+            }
+        });
     }
 
     public void changeColors(boolean fingerUp) {
-//        ArrayList newQueue = (ArrayList) drawQueue.clone();
-
         // Loop through drawQueue
         for (int i = 0; i < drawQueue.size(); i++) {
             int[] coord = (int[]) drawQueue.get(i);
@@ -256,11 +306,10 @@ public class Drawing extends AppCompatActivity {
 //                "\nX^2: " + Math.pow(xDist, 2) + "\nY^2: " + Math.pow(yDist, 2));
 
                 // If this distance is greater than the side of a pixel
-//                float a = Math.round(pixels.getSize()/2);
-                float a = pixels.getSize();
-                if(distance > a) {
+                float size = pixels.getSize();
+                if(distance > size) {
                     System.out.println("Test");
-                    int multiplier = Math.round(distance/a);
+                    int multiplier = Math.round(distance/size);
 
                     float x = xDist/multiplier;
                     float y = yDist/multiplier;
@@ -280,12 +329,5 @@ public class Drawing extends AppCompatActivity {
             lastDrawn = null;
         }
         drawQueue.clear();
-    }
-
-    public void takeTime() {
-        firstTouchTime = System.currentTimeMillis();
-    }
-    public void toggleSecondFinger() {
-        secondFinger = !secondFinger;
     }
 }

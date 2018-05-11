@@ -1,12 +1,15 @@
 package com.example.millar.pixelartapplication;
 
 import android.content.Context;
+import android.content.ContextWrapper;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
-import android.graphics.Point;
+import android.os.Environment;
 import android.view.View;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.InputStreamReader;
@@ -18,50 +21,39 @@ import java.util.ArrayList;
 
 public class Pixels extends View {
     private Context context;
+    private int backgroundColour;
     private int width;
     private int height;
     private int size;
-    private Bitmap bitmap;
-    private int[][] pixels;
+    private Bitmap drawingBitmap;
 
-    public Pixels(Context c, int w, int h, Point s, int backgroundColour) {
+    public Pixels(Context c, int bc, int w, int h, int s) {
+        // New drawing
         super(c);
         context = c;
 
+        backgroundColour = bc;
         width = w;
         height = h;
-        size = s.x / width;
+        size = s;
 
-        bitmap = Bitmap.createBitmap(width*size, height*size, Bitmap.Config.ARGB_8888);
-        bitmap.eraseColor(backgroundColour);
-
-        pixels = new int[width][height]; // Access pixels[x][y]
-        for(int x = 0; x < width; x++) {
-            for(int y = 0; y < height; y++) {
-                pixels[x][y] = backgroundColour;
-            }
-        }
+        // Initialize the bitmap
+        drawingBitmap = Bitmap.createBitmap(width*size, height*size, Bitmap.Config.ARGB_8888);
+        drawingBitmap.eraseColor(backgroundColour);
     }
 
-    public Pixels(Context c, String fileName, Point s) {
+    public Pixels(Context c, String fileName) {
+        // Load saved drawing
         super(c);
         context = c;
-
         load(fileName);
-
-        width = pixels.length;
-        height = pixels[0].length;
-        size = s.x / width;
-
-        bitmap = Bitmap.createBitmap(width*size, height*size, Bitmap.Config.ARGB_8888);
-        loadDrawing();
     }
 
     @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
 
-        canvas.drawBitmap(bitmap, 0, 0, null);
+        canvas.drawBitmap(drawingBitmap, 0, 0, null);
     }
 
     @Override
@@ -70,6 +62,7 @@ public class Pixels extends View {
     }
 
     public void changePixelColor(int xcoord, int ycoord, int color) {
+        // This will find the positions in the top left corner of the pixel
         xcoord /= size;
         ycoord /= size;
 
@@ -87,87 +80,83 @@ public class Pixels extends View {
             ycoord = 0;
         }
 
-        pixels[xcoord][ycoord] = color;
-
-        if(bitmap.getPixel(xcoord*size, ycoord*size) != color) {
+        if(drawingBitmap.getPixel(xcoord*size, ycoord*size) != color) {
             for (int x = xcoord * size; x < xcoord * size + size; x++) {
                 for (int y = ycoord * size; y < ycoord * size + size; y++) {
-                    bitmap.setPixel(x, y, color);
+                    drawingBitmap.setPixel(x, y, color);
                 }
             }
 
+            // Redraw the screen
             this.invalidate();
         }
     }
 
-    public void loadDrawing() {
-        for (int x = 0; x < width; x++) {
-            for (int y = 0; y < height; y++) {
-                if(bitmap.getPixel(x*size, y*size) != pixels[x][y]) {
-                    for (int xPixels = x * size; xPixels < x * size + size; xPixels++) {
-                        for (int yPixels = y * size; yPixels < y * size + size; yPixels++) {
-                            bitmap.setPixel(xPixels, yPixels, pixels[x][y]);
-                        }
-                    }
-
-                    this.invalidate();
-                }
-            }
-        }
-
-        this.invalidate();
-    }
-
     public void save(String fileName) {
-        FileOutputStream outputStream;
+        FileOutputStream txtOutputStream;
+        FileOutputStream pngOutputStream;
         try {
-            outputStream = context.openFileOutput(fileName, Context.MODE_PRIVATE);
+            // Write to the txt file
+            txtOutputStream = context.openFileOutput(fileName + ".txt", Context.MODE_PRIVATE);
             StringBuffer data = new StringBuffer();
 
-            for(int x = 0; x < pixels.length; x++) {
-                for(int y = 0; y < pixels[x].length; y++) {
-                    data.append(pixels[x][y]);
-                    data.append((y == pixels[x].length-1) ? "": ",");
-                }
-                data.append((x == pixels.length-1) ? "": "\n");
-            }
+            data.append(backgroundColour);
+            data.append(",");
+            data.append(width);
+            data.append(",");
+            data.append(height);
+            data.append(",");
+            data.append(size);
 
-            outputStream.write(data.toString().getBytes());
+            txtOutputStream.write(data.toString().getBytes());
+
+            // Write to the png file
+            pngOutputStream = context.openFileOutput(fileName + ".png", Context.MODE_PRIVATE);
+            drawingBitmap.compress(Bitmap.CompressFormat.PNG, 100, pngOutputStream);
+
+            // Close the files
+            txtOutputStream.close();
+            pngOutputStream.close();
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
     public boolean load(String fileName) {
-        try {
-            FileInputStream inputStream = context.openFileInput(fileName);
-            InputStreamReader inputStreamReader = new InputStreamReader(inputStream);
-            BufferedReader reader = new BufferedReader(inputStreamReader);
+    try {
+        // Initialize bitmap
+        System.out.println(fileName);
+        File f = new File(context.getFilesDir(),fileName + ".png");
+        drawingBitmap = BitmapFactory.decodeStream(new FileInputStream(f)).copy(Bitmap.Config.ARGB_8888, true);
 
-            ArrayList lines = new ArrayList();
-            int count = 0;
-            lines.add(reader.readLine());
-            while(lines.get(count) != null) {
-                lines.add(reader.readLine());
-                count++;
+        // Get variables
+        FileInputStream inputStream = context.openFileInput(fileName + ".txt");
+        InputStreamReader inputStreamReader = new InputStreamReader(inputStream);
+        BufferedReader reader = new BufferedReader(inputStreamReader);
+
+        String line = reader.readLine();
+        String[] lineValues = line.split(",");
+        for(int i = 0; i < lineValues.length; i++) {
+            switch (i) {
+                case 0:
+                    backgroundColour = Integer.parseInt(lineValues[i]);
+                    break;
+                case 1:
+                    width = Integer.parseInt(lineValues[i]);
+                    break;
+                case 2:
+                    height = Integer.parseInt(lineValues[i]);
+                    break;
+                case 3:
+                    size = Integer.parseInt(lineValues[i]);
+                    break;
             }
-
-            pixels = new int[count][];
-            for(int i = 0; i < count; i++) {
-                String currentLine = (String) lines.get(i);
-                String[] values = currentLine.split(",");
-
-                pixels[i] = new int[values.length];
-                for (int j = 0; j < values.length; j++) {
-                    pixels[i][j] = Integer.parseInt(values[j]);
-                }
-            }
-
-            return true;
-        } catch (Exception e) {
-            e.printStackTrace();
-            return false;
         }
+        return true;
+    } catch (Exception e) {
+        e.printStackTrace();
+        return false;
+    }
     }
 
     public int getSize() {

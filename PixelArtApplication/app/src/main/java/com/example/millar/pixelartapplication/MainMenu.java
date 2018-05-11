@@ -2,27 +2,17 @@ package com.example.millar.pixelartapplication;
 
 import android.content.Intent;
 import android.support.constraint.ConstraintLayout;
-import android.support.constraint.ConstraintSet;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
-import android.text.Layout;
 import android.view.View;
-import android.widget.AdapterView;
-import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.ListView;
-import android.widget.TextView;
-
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.InputStreamReader;
-import java.util.ArrayList;
+import java.util.Arrays;
 
 public class MainMenu extends AppCompatActivity {
     ConstraintLayout layout;
     ListView drawings;
-    ArrayAdapter filesAdapter;
+    drawingsAdapter filesAdapter;
 
     Button newDrawingButton;
 
@@ -31,26 +21,10 @@ public class MainMenu extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main_menu);
 
+        // Find views
         layout = findViewById(R.id.MainMenu_layout);
         drawings = findViewById(R.id.Drawings);
 
-        String[] files = fileList();
-        filesAdapter = new ArrayAdapter<String>(this, R.layout.list_view, R.id.item, files);
-        drawings.setAdapter(filesAdapter);
-
-        drawings.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-            @Override
-            public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
-                String drawing = adapterView.getItemAtPosition(i).toString();
-
-                Intent drawingIntent = new Intent(view.getContext(), Drawing.class);
-
-                drawingIntent.putExtra("Loading", true);
-                drawingIntent.putExtra("FileName", drawing);
-
-                startActivity(drawingIntent);
-            }
-        });
         // newDrawingButton functionality
         newDrawingButton = findViewById(R.id.newDrawing);
         newDrawingButton.setOnClickListener(new View.OnClickListener() {
@@ -59,5 +33,38 @@ public class MainMenu extends AppCompatActivity {
                 startActivity(new Intent(view.getContext(), newDrawing.class));
             }
         });
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+
+        /*
+            Display all files onResume() so that they will be refreshed if the user navigates
+            back to this activity
+        */
+
+        /*
+            each saved drawing has two files "drawing.png" and "drawing.txt"
+            The txt file contains variables (background colour, pixels wide, pixels high, size of each pixel)
+            The png file contains the drawing itself
+        */
+        String[] files = fileList();
+
+        // Only want to display the file name with no extension and remove duplicates
+        String[] filesList = new String[files.length/2];
+        int count = 0;
+        for(int i = 0; i < files.length; i++) {
+            System.out.println(files[i]);
+            String file = files[i].split("\\.")[0];
+            if(!Arrays.asList(filesList).contains(file)) {
+                filesList[count] = file;
+                count++;
+            }
+        }
+
+        // Add files into the list
+        filesAdapter = new drawingsAdapter(this, filesList);
+        drawings.setAdapter(filesAdapter);
     }
 }

@@ -18,7 +18,7 @@
         </activity>
         <activity android:name=".newDrawing" />
         <activity android:name=".Drawing" />
-        <activity android:name=".testActivity"></activity>
+        <activity android:name=".testActivity" />
     </application>
 
 </manifest>

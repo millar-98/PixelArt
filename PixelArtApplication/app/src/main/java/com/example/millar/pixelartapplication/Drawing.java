@@ -2,12 +2,10 @@ package com.example.millar.pixelartapplication;
 
 import android.content.res.ColorStateList;
 import android.graphics.Color;
-import android.graphics.Point;
 import android.support.constraint.ConstraintLayout;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
-import android.view.Display;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
@@ -17,12 +15,7 @@ import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.PopupWindow;
 import android.widget.SeekBar;
-
-import java.io.BufferedReader;
-import java.io.FileInputStream;
-import java.io.InputStreamReader;
 import java.lang.Math;
-
 import java.util.ArrayList;
 
 public class Drawing extends AppCompatActivity {
@@ -41,17 +34,18 @@ public class Drawing extends AppCompatActivity {
     // Drawing objects
     ArrayList drawQueue;
     Pixels pixels;
-    boolean saved;
-    String fileName;
 
     // Drawing/panning variables
     long firstTouchTime;
     boolean secondFinger;
     float[] previousCoord;
     int[] lastDrawn;
+    boolean saved;
+    String fileName;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        System.out.println("onCreate");
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_drawing);
 
@@ -70,30 +64,20 @@ public class Drawing extends AppCompatActivity {
         colourPickerButton = findViewById(R.id.colourPickerButton);
         saveButton = findViewById(R.id.save);
 
-        // Work out screen size
-        Display display = getWindowManager().getDefaultDisplay();
-        Point size = new Point();
-        display.getSize(size);
-
         // Get passed parameters
         Bundle parameters = getIntent().getExtras();
-        boolean loading = parameters.getBoolean("Loading");
-        if(!loading) {
-            saved = false;
-            final int width = parameters.getInt("Width");
-            final int height = parameters.getInt("Height");
-            int backgroundColour = parameters.getInt("backgroundColour");
-
-            // Create pixels
-            pixels = new Pixels(this, width, height, size, backgroundColour);
-            Canvas.addView(pixels);
-        }
-        else {
+        if(parameters.getBoolean("Loading")) {
+            // Loading saved drawing
             saved = true;
             fileName = parameters.getString("FileName");
-            pixels = new Pixels(this, fileName, size);
-            Canvas.addView(pixels);
+            pixels = new Pixels(this, fileName);
+        } else {
+            // Creating new drawing
+            pixels = new Pixels(this, parameters.getInt("backgroundColour"), parameters.getInt("width"),
+                    parameters.getInt("height"), parameters.getInt("size"));
+            saved = false;
         }
+        Canvas.addView(pixels);
 
         // pixels onTouchListener
         pixels.setOnTouchListener(new View.OnTouchListener() {
@@ -258,6 +242,7 @@ public class Drawing extends AppCompatActivity {
             @Override
             public void onClick(View view) {
                 if(!saved) {
+                    // If this is an unsaved drawing, prompt user for the name
                     LayoutInflater inflater = (LayoutInflater) Drawing.this.getSystemService(LAYOUT_INFLATER_SERVICE);
                     final View customView = inflater.inflate(R.layout.save_popup_window, null);
                     final PopupWindow popupWindow = new PopupWindow(customView, 1000, 1500, true);
@@ -281,6 +266,7 @@ public class Drawing extends AppCompatActivity {
                     popupWindow.showAtLocation(mainLayout, Gravity.CENTER, 0, 0);
                 }
                 else {
+                    // Otherwise no need to get any information from user
                     pixels.save(fileName);
                 }
             }

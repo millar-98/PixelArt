@@ -56,7 +56,7 @@ public class drawingsAdapter extends ArrayAdapter<String> {
         deleteButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                String dir = context.getFilesDir().getAbsolutePath();
+                String dir = context.getFilesDir().getAbsolutePath() + "/Drawings/";
 
                 // Delete both the txt and png files
                 File textFile = new File(dir, fileName + ".txt");

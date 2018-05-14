@@ -9,6 +9,7 @@ import android.os.Bundle;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
+import android.view.ScaleGestureDetector;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
@@ -27,6 +28,10 @@ public class Drawing extends AppCompatActivity {
     SeekBar zoomBar;
     FloatingActionButton colourPickerButton;
     FloatingActionButton saveButton;
+    FloatingActionButton toolsButton;
+    FloatingActionButton colourSelectorButton;
+
+    boolean toolsVisible;
 
     // Colour options
     int colour;
@@ -39,6 +44,7 @@ public class Drawing extends AppCompatActivity {
     long firstTouchTime;
     boolean secondFinger;
     float[] previousCoord;
+    int previousDistance;
     int[] lastDrawn;
     boolean saved;
     String fileName;
@@ -55,6 +61,7 @@ public class Drawing extends AppCompatActivity {
         secondFinger = false;
         previousCoord = new float[2];
         lastDrawn = null;
+        toolsVisible = false;
 
         // Find views
         mainLayout = findViewById(R.id.mainLayout);
@@ -63,6 +70,8 @@ public class Drawing extends AppCompatActivity {
         zoomBar.setMax(200);
         colourPickerButton = findViewById(R.id.colourPickerButton);
         saveButton = findViewById(R.id.save);
+        toolsButton = findViewById(R.id.Tools);
+        colourSelectorButton = findViewById(R.id.colourSelector);
 
         // Get passed parameters
         Bundle parameters = getIntent().getExtras();
@@ -100,12 +109,16 @@ public class Drawing extends AppCompatActivity {
                     // Pan
                     if(motionEvent.getAction() == MotionEvent.ACTION_MOVE) {
                         // Get finger coordinates
-                        float x = motionEvent.getX(0);
-                        float y = motionEvent.getY(0);
+                        float x1 = motionEvent.getX(0);
+                        float y1 = motionEvent.getY(0);
+                        float x2 = motionEvent.getX(1);
+                        float y2 = motionEvent.getY(1);
 
+
+                        // *** PANNING ***
                         // Work out the distance fingers have moved
-                        float xdiff = x - previousCoord[0];
-                        float ydiff = y - previousCoord[1];
+                        float xdiff = x1 - previousCoord[0];
+                        float ydiff = y1 - previousCoord[1];
                         // Reduce distance to slow down and avoid stuttering
                         xdiff /= 1.5;
                         ydiff /= 1.5;
@@ -117,6 +130,9 @@ public class Drawing extends AppCompatActivity {
                         // Set previous coordinates
                         previousCoord[0] = motionEvent.getX();
                         previousCoord[1] = motionEvent.getY();
+
+                        // *** ZOOMING ***
+                        // Work out the distance between the fingers
                     }
                 }
                 // Last finger is taken off the screen
@@ -268,6 +284,18 @@ public class Drawing extends AppCompatActivity {
                 else {
                     // Otherwise no need to get any information from user
                     pixels.save(fileName);
+                }
+            }
+        });
+
+        toolsButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                toolsVisible = !toolsVisible;
+                if(toolsVisible) {
+                    colourSelectorButton.setVisibility(View.VISIBLE);
+                } else {
+                    colourSelectorButton.setVisibility(View.INVISIBLE);
                 }
             }
         });

@@ -12,6 +12,9 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 
@@ -93,30 +96,33 @@ public class Pixels extends View {
     }
 
     public void save(String fileName) {
-        FileOutputStream txtOutputStream;
-        FileOutputStream pngOutputStream;
         try {
             // Write to the txt file
-            txtOutputStream = context.openFileOutput(fileName + ".txt", Context.MODE_PRIVATE);
-            StringBuffer data = new StringBuffer();
+            File directory = new File(context.getFilesDir(), "Drawings");
+            if(!directory.exists()) {
+                directory.mkdirs();
+            }
+            File textFile = new File(directory, fileName + ".txt");
+            FileWriter textFileWriter = new FileWriter(textFile);
 
-            data.append(backgroundColour);
-            data.append(",");
-            data.append(width);
-            data.append(",");
-            data.append(height);
-            data.append(",");
-            data.append(size);
+            textFileWriter.append(Integer.toString(backgroundColour));
+            textFileWriter.write(",");
+            textFileWriter.write(Integer.toString(width));
+            textFileWriter.write(",");
+            textFileWriter.write(Integer.toString(height));
+            textFileWriter.write(",");
+            textFileWriter.write(Integer.toString(size));
 
-            txtOutputStream.write(data.toString().getBytes());
+            textFileWriter.flush();
+            textFileWriter.close();
 
             // Write to the png file
-            pngOutputStream = context.openFileOutput(fileName + ".png", Context.MODE_PRIVATE);
-            drawingBitmap.compress(Bitmap.CompressFormat.PNG, 100, pngOutputStream);
+            File pngFile = new File(directory, fileName + ".png");
+            pngFile.createNewFile();
+            FileOutputStream pngFileWriter = new FileOutputStream(pngFile);
+            drawingBitmap.compress(Bitmap.CompressFormat.PNG, 100, pngFileWriter);
 
-            // Close the files
-            txtOutputStream.close();
-            pngOutputStream.close();
+            pngFileWriter.close();
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -126,15 +132,16 @@ public class Pixels extends View {
     try {
         // Initialize bitmap
         System.out.println(fileName);
-        File f = new File(context.getFilesDir(),fileName + ".png");
+        File f = new File(context.getFilesDir(),"/Drawings/" + fileName + ".png");
         drawingBitmap = BitmapFactory.decodeStream(new FileInputStream(f)).copy(Bitmap.Config.ARGB_8888, true);
 
         // Get variables
-        FileInputStream inputStream = context.openFileInput(fileName + ".txt");
-        InputStreamReader inputStreamReader = new InputStreamReader(inputStream);
-        BufferedReader reader = new BufferedReader(inputStreamReader);
+        File textFile = new File(context.getFilesDir() + "/Drawings/" + fileName + ".txt");
+        FileInputStream inputStream = new FileInputStream(textFile);
+        InputStreamReader reader = new InputStreamReader(inputStream);
+        BufferedReader bufferedReader = new BufferedReader(reader);
 
-        String line = reader.readLine();
+        String line = bufferedReader.readLine();
         String[] lineValues = line.split(",");
         for(int i = 0; i < lineValues.length; i++) {
             switch (i) {

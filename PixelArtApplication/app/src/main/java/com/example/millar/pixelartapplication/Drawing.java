@@ -9,13 +9,12 @@ import android.os.Bundle;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
-import android.view.ScaleGestureDetector;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.PopupWindow;
-import android.widget.SeekBar;
+
 import java.lang.Math;
 import java.util.ArrayList;
 
@@ -25,11 +24,10 @@ public class Drawing extends AppCompatActivity {
     ConstraintLayout Canvas;
 
     // Views
-    SeekBar zoomBar;
     FloatingActionButton colourPickerButton;
     FloatingActionButton saveButton;
     FloatingActionButton toolsButton;
-    FloatingActionButton colourSelectorButton;
+    FloatingActionButton colourCopyButton;
 
     boolean toolsVisible;
 
@@ -41,11 +39,21 @@ public class Drawing extends AppCompatActivity {
     Pixels pixels;
 
     // Drawing/panning variables
+    boolean canDraw;
+
+    EyeDropper eyeDropper; // Graphic to show what colour your finger is over
+
     long firstTouchTime;
-    boolean secondFinger;
-    float[] previousCoord;
-    int previousDistance;
+    boolean secondFinger; // True when a second finger touches the screen
+    float[] previousCoord; // The previous finger coordinate, used for panning
+
+    double previousDistance; // Saves the previous distance between two fingers for pinch zooming
+    boolean scale; // True when a previous distance has been recorded
+
+    // Records the last drawn pixel. Set to null once the finger is lifted up. This helps fix
+    // A drawing issue where the changeColours algorithm wasn't filling in between two pixels
     int[] lastDrawn;
+
     boolean saved;
     String fileName;
 
@@ -56,22 +64,26 @@ public class Drawing extends AppCompatActivity {
         setContentView(R.layout.activity_drawing);
 
         // Initialize variables
+        canDraw = true;
         drawQueue = new ArrayList();
-        colour = Color.RED;
+        colour = Color.BLACK;
         secondFinger = false;
         previousCoord = new float[2];
         lastDrawn = null;
         toolsVisible = false;
+        scale = false;
 
         // Find views
         mainLayout = findViewById(R.id.mainLayout);
         Canvas = findViewById(R.id.layout);
-        zoomBar = findViewById(R.id.zoom);
-        zoomBar.setMax(200);
         colourPickerButton = findViewById(R.id.colourPickerButton);
         saveButton = findViewById(R.id.save);
         toolsButton = findViewById(R.id.Tools);
-        colourSelectorButton = findViewById(R.id.colourSelector);
+        colourCopyButton = findViewById(R.id.colourSelector);
+
+        eyeDropper = new EyeDropper(this, colour);
+        mainLayout.addView(eyeDropper);
+        eyeDropper.setVisibility(View.INVISIBLE);
 
         // Get passed parameters
         Bundle parameters = getIntent().getExtras();
@@ -92,77 +104,91 @@ public class Drawing extends AppCompatActivity {
         pixels.setOnTouchListener(new View.OnTouchListener() {
             @Override
             public boolean onTouch(View view, MotionEvent motionEvent) {
-                // First finger down, unsure if user wants to pan or draw
-                if(motionEvent.getAction() == MotionEvent.ACTION_DOWN) {
-                    // Take coordinates in case the user wants to pan
-                    // This stops the canvas jumping
-                    previousCoord[0] = motionEvent.getX();
-                    previousCoord[1] = motionEvent.getY();
-
-                    // Take time, after 50 milliseconds drawing will start
-                    firstTouchTime = System.currentTimeMillis();
-                }
-                // A second finger has touched the screen
-                else if(motionEvent.getPointerCount() > 1) {
-                    secondFinger = true;
-
-                    // Pan
-                    if(motionEvent.getAction() == MotionEvent.ACTION_MOVE) {
-                        // Get finger coordinates
-                        float x1 = motionEvent.getX(0);
-                        float y1 = motionEvent.getY(0);
-                        float x2 = motionEvent.getX(1);
-                        float y2 = motionEvent.getY(1);
-
-
-                        // *** PANNING ***
-                        // Work out the distance fingers have moved
-                        float xdiff = x1 - previousCoord[0];
-                        float ydiff = y1 - previousCoord[1];
-                        // Reduce distance to slow down and avoid stuttering
-                        xdiff /= 1.5;
-                        ydiff /= 1.5;
-
-                        // Move the canvas
-                        Canvas.setX(Canvas.getX() + xdiff);
-                        Canvas.setY(Canvas.getY() + ydiff);
-
-                        // Set previous coordinates
+                if(canDraw) {
+                    // First finger down, unsure if user wants to pan or draw
+                    if (motionEvent.getAction() == MotionEvent.ACTION_DOWN) {
+                        // Take coordinates in case the user wants to pan
+                        // This stops the canvas jumping
                         previousCoord[0] = motionEvent.getX();
                         previousCoord[1] = motionEvent.getY();
 
-                        // *** ZOOMING ***
-                        // Work out the distance between the fingers
+                        // Take time, after 50 milliseconds drawing will start
+                        firstTouchTime = System.currentTimeMillis();
                     }
-                }
-                // Last finger is taken off the screen
-                else if(motionEvent.getAction() == MotionEvent.ACTION_UP) {
-                    // If there never was a second finger, the user wanted to place a single square
-                    if(!secondFinger) {
-                        Integer xcoord = Math.round(motionEvent.getX());
-                        Integer ycoord = Math.round(motionEvent.getY());
+                    // A second finger has touched the screen
+                    else if (motionEvent.getPointerCount() > 1) {
+                        secondFinger = true;
 
-                        int[] input = {xcoord, ycoord};
-                        drawQueue.add(input);
-                        changeColors(true);
+                        // Pan
+                        if (motionEvent.getAction() == MotionEvent.ACTION_MOVE) {
+                            // Get finger coordinates
+                            float x1 = motionEvent.getX(0);
+                            float y1 = motionEvent.getY(0);
+                            float x2 = motionEvent.getX(1);
+                            float y2 = motionEvent.getY(1);
+
+
+                            // *** PANNING ***
+                            // Work out the distance fingers have moved
+                            float xdiff = x1 - previousCoord[0];
+                            float ydiff = y1 - previousCoord[1];
+                            // Reduce distance to slow down and avoid stuttering
+                            xdiff /= 1.5;
+                            ydiff /= 1.5;
+
+                            // Move the canvas
+                            Canvas.setX(Canvas.getX() + xdiff);
+                            Canvas.setY(Canvas.getY() + ydiff);
+
+                            // Set previous coordinates
+                            previousCoord[0] = motionEvent.getX();
+                            previousCoord[1] = motionEvent.getY();
+
+                            // *** ZOOMING ***
+                            // Work out the distance between the fingers
+                            double distance = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+                            if (scale) {
+                                double difference = distance - previousDistance;
+                                System.out.println(difference);
+                                double scaleChange = difference / 1000;
+                                System.out.println(scaleChange);
+                                Canvas.setScaleX(Canvas.getScaleX() + (float) scaleChange);
+                                Canvas.setScaleY(Canvas.getScaleY() + (float) scaleChange);
+                            } else {
+                                scale = true;
+                            }
+                            previousDistance = distance;
+                        }
                     }
+                    // Last finger is taken off the screen
+                    else if (motionEvent.getAction() == MotionEvent.ACTION_UP) {
+                        // If there never was a second finger, the user wanted to place a single square
+                        if (!secondFinger) {
+                            Integer xcoord = Math.round(motionEvent.getX());
+                            Integer ycoord = Math.round(motionEvent.getY());
 
-                    // Make sure secondFinger is false
-                    secondFinger = false;
-                }
-                // Only one finger on screen and moved
-                else if(motionEvent.getAction() == MotionEvent.ACTION_MOVE) {
+                            int[] input = {xcoord, ycoord};
+                            drawQueue.add(input);
+                            changeColors(true);
+                        }
+
+                        // Make sure secondFinger is false
+                        secondFinger = false;
+                        scale = false;
+                    }
+                    // Only one finger on screen and moved
+                    else if (motionEvent.getAction() == MotionEvent.ACTION_MOVE) {
                     /*
                        Delay the time before drawing starts to a barely noticeable time
                        This way if both fingers touch the screen within 100 milliseconds of each other
                        panning will start without drawing
                     */
-                    if(System.currentTimeMillis() - firstTouchTime > 100 && !secondFinger) {
-                        // Get current finger coordinates
-                        Integer xcoord = Math.round(motionEvent.getX());
-                        Integer ycoord = Math.round(motionEvent.getY());
+                        if (System.currentTimeMillis() - firstTouchTime > 100 && !secondFinger) {
+                            // Get current finger coordinates
+                            Integer xcoord = Math.round(motionEvent.getX());
+                            Integer ycoord = Math.round(motionEvent.getY());
 
-                        int[] input = {xcoord, ycoord};
+                            int[] input = {xcoord, ycoord};
 
                         /*
                             Get historical coordinates as well. These are hidden behind this function
@@ -171,43 +197,49 @@ public class Drawing extends AppCompatActivity {
                             later that solves this issue.
                          */
 
-                        for (int i = 0; i < motionEvent.getHistorySize(); i++) {
-                            int[] historicalPoint = {Math.round(motionEvent.getHistoricalX(i)), Math.round(motionEvent.getHistoricalY(i))};
-                            // Add historical point into the drawQueue to be drawn
-                            drawQueue.add(historicalPoint);
-                        }
+                            for (int i = 0; i < motionEvent.getHistorySize(); i++) {
+                                int[] historicalPoint = {Math.round(motionEvent.getHistoricalX(i)), Math.round(motionEvent.getHistoricalY(i))};
+                                // Add historical point into the drawQueue to be drawn
+                                drawQueue.add(historicalPoint);
+                            }
 
-                        // Add current coordinates into the drawQueue to be drawn
-                        drawQueue.add(input);
-                        changeColors(false);
+                            // Add current coordinates into the drawQueue to be drawn
+                            drawQueue.add(input);
+                            changeColors(false);
+                        }
+                    }
+                }
+                // Eyedropper tool selected
+                else {
+                    if(motionEvent.getAction() == MotionEvent.ACTION_DOWN) {
+                        // Show the eyedropper graphic
+                        int[] screenCoordinates = {Math.round(motionEvent.getRawX()), Math.round(motionEvent.getRawY())};
+                        int[] coordinates = {Math.round(motionEvent.getX()), Math.round(motionEvent.getY())};
+                        colour = pixels.getPixelColor(coordinates[0], coordinates[1]);
+                        eyeDropper.redraw(colour, screenCoordinates);
+                        eyeDropper.setVisibility(View.VISIBLE);
+                    }
+                    else if(motionEvent.getAction() == MotionEvent.ACTION_MOVE) {
+                        // Update the eyedropper graphic
+                        int[] screenCoordinates = {Math.round(motionEvent.getRawX()), Math.round(motionEvent.getRawY()) - 50};
+                        int[] coordinates = {Math.round(motionEvent.getX()), Math.round(motionEvent.getY())};
+                        colour = pixels.getPixelColor(coordinates[0], coordinates[1]);
+                        eyeDropper.redraw(colour, screenCoordinates);
+                    }
+                    else if(motionEvent.getAction() == MotionEvent.ACTION_UP) {
+                        // Update the eyedropper graphic and return back to drawing
+                        int[] screenCoordinates = {Math.round(motionEvent.getRawX()), Math.round(motionEvent.getRawY())};
+                        int[] coordinates = {Math.round(motionEvent.getX()), Math.round(motionEvent.getY())};
+                        colour = pixels.getPixelColor(coordinates[0], coordinates[1]);
+                        eyeDropper.redraw(colour, screenCoordinates);
+
+                        canDraw = true;
+                        eyeDropper.setVisibility(View.INVISIBLE);
+                        colourCopyButton.setBackgroundTintList(ColorStateList.valueOf(getResources().getColor(R.color.colorAccent)));
                     }
                 }
 
                 return true;
-            }
-        });
-
-
-        zoomBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            @Override
-            public void onProgressChanged(SeekBar seekBar, int i, boolean b) {
-                // Divide by 100 for the decimal representation of percentage
-                float scale = (float) i/100;
-                // Add one so that the scale will increase
-                scale += 1;
-                // Set the canvas scale
-                Canvas.setScaleX(scale);
-                Canvas.setScaleY(scale);
-            }
-
-            @Override
-            public void onStartTrackingTouch(SeekBar seekBar) {
-
-            }
-
-            @Override
-            public void onStopTrackingTouch(SeekBar seekBar) {
-
             }
         });
 
@@ -229,6 +261,8 @@ public class Drawing extends AppCompatActivity {
                 // Set up SVbar
                 picker.addSVBar(svBar);
 
+                picker.setOldCenterColor(colour);
+
                 close.setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View view) {
@@ -242,9 +276,7 @@ public class Drawing extends AppCompatActivity {
                     public void onClick(View view) {
                         // Set the colour
                         colour = picker.getColor();
-
-                        // Change colour of the colour picker button
-                        colourPickerButton.setBackgroundTintList(ColorStateList.valueOf(colour));
+                        popupWindow.dismiss();
                     }
                 });
 
@@ -293,9 +325,21 @@ public class Drawing extends AppCompatActivity {
             public void onClick(View view) {
                 toolsVisible = !toolsVisible;
                 if(toolsVisible) {
-                    colourSelectorButton.setVisibility(View.VISIBLE);
+                    colourCopyButton.setVisibility(View.VISIBLE);
                 } else {
-                    colourSelectorButton.setVisibility(View.INVISIBLE);
+                    colourCopyButton.setVisibility(View.INVISIBLE);
+                }
+            }
+        });
+
+        colourCopyButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                canDraw = !canDraw;
+                if(!canDraw) {
+                    colourCopyButton.setBackgroundTintList(ColorStateList.valueOf(getResources().getColor(R.color.colorPrimaryDark)));
+                } else {
+                    colourCopyButton.setBackgroundTintList(ColorStateList.valueOf(getResources().getColor(R.color.colorAccent)));
                 }
             }
         });

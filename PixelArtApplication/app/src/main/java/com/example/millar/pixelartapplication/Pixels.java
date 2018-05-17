@@ -95,6 +95,33 @@ public class Pixels extends View {
         }
     }
 
+    public int getPixelColor(int xcoord, int ycoord) {
+        int colour;
+
+        // This will find the positions in the top left corner of the pixel
+        xcoord /= size;
+        ycoord /= size;
+
+        // Stop out of range exceptions occurring
+        if(xcoord >= width) {
+            xcoord = width-1;
+        }
+        else if(xcoord < 0) {
+            xcoord = 0;
+        }
+        if(ycoord >= height) {
+            ycoord = height-1;
+        }
+        else if(ycoord < 0) {
+            ycoord = 0;
+        }
+
+        colour = drawingBitmap.getPixel(xcoord*size, ycoord*size);
+
+        System.out.println("Colour: " + colour + "\nX: " + xcoord + "\nY: " + ycoord);
+        return colour;
+    }
+
     public void save(String fileName) {
         try {
             // Write to the txt file

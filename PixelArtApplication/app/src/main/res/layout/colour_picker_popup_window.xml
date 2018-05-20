@@ -7,16 +7,6 @@
     android:layout_height="match_parent"
     android:background="@drawable/colourpicker_bg">
 
-    <ImageButton
-        android:id="@+id/close"
-        android:layout_width="41dp"
-        android:layout_height="33dp"
-        android:layout_marginStart="8dp"
-        android:layout_marginTop="8dp"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:srcCompat="@android:drawable/ic_menu_close_clear_cancel" />
-
     <com.example.millar.pixelartapplication.ColorPicker
         android:id="@+id/picker"
         android:layout_width="wrap_content"
@@ -39,16 +29,26 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/picker" />
 
-    <Button
+    <android.support.design.widget.FloatingActionButton
+        android:id="@+id/eyeDropper"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:layout_marginTop="8dp"
+        android:clickable="true"
+        app:layout_constraintStart_toStartOf="@+id/SVBar"
+        app:layout_constraintTop_toBottomOf="@+id/SVBar"
+        app:srcCompat="@drawable/ic_colour_selector" />
+
+    <android.support.design.widget.FloatingActionButton
         android:id="@+id/submit"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginEnd="8dp"
-        android:layout_marginStart="8dp"
         android:layout_marginTop="8dp"
-        android:text="Submit"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/SVBar" />
+        android:clickable="true"
+        app:layout_constraintEnd_toEndOf="@+id/SVBar"
+        app:layout_constraintTop_toBottomOf="@+id/SVBar"
+        app:srcCompat="@drawable/ic_submit" />
 
 </android.support.constraint.ConstraintLayout>

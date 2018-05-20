@@ -12,8 +12,8 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
-import android.widget.ImageButton;
 import android.widget.PopupWindow;
+import android.widget.TextView;
 
 import java.lang.Math;
 import java.util.ArrayList;
@@ -27,25 +27,32 @@ public class Drawing extends AppCompatActivity {
     FloatingActionButton colourPickerButton;
     FloatingActionButton saveButton;
     FloatingActionButton toolsButton;
-    FloatingActionButton colourCopyButton;
+    FloatingActionButton clearCanvasButton;
+    FloatingActionButton showGridButton;
+    FloatingActionButton fillToolButton;
+    FloatingActionButton cancelEyeDropper;
+    TextView clearCanvasText;
 
     boolean toolsVisible;
 
-    // Colour options
-    int colour;
-
-    // Drawing objects
+    // Drawing
     ArrayList drawQueue;
     Pixels pixels;
+    int colour;
 
-    // Drawing/panning variables
+    // Tools
     boolean canDraw;
-
+    boolean eyeDropperEnabled;
+    boolean useOldColour;
+    int oldColour;
+    int newColour;
+    boolean fillToolEnabled;
+    int[] initialCoord_SLtool;
     EyeDropper eyeDropper; // Graphic to show what colour your finger is over
 
     long firstTouchTime;
     boolean secondFinger; // True when a second finger touches the screen
-    float[] previousCoord; // The previous finger coordinate, used for panning
+    float[] previousCoord_panning; // The previous finger coordinate, used for panning
 
     double previousDistance; // Saves the previous distance between two fingers for pinch zooming
     boolean scale; // True when a previous distance has been recorded
@@ -54,6 +61,7 @@ public class Drawing extends AppCompatActivity {
     // A drawing issue where the changeColours algorithm wasn't filling in between two pixels
     int[] lastDrawn;
 
+    // Saving
     boolean saved;
     String fileName;
 
@@ -65,10 +73,13 @@ public class Drawing extends AppCompatActivity {
 
         // Initialize variables
         canDraw = true;
+        eyeDropperEnabled = false;
+        fillToolEnabled = false;
+        initialCoord_SLtool = new int[2];
         drawQueue = new ArrayList();
         colour = Color.BLACK;
         secondFinger = false;
-        previousCoord = new float[2];
+        previousCoord_panning = new float[2];
         lastDrawn = null;
         toolsVisible = false;
         scale = false;
@@ -79,7 +90,11 @@ public class Drawing extends AppCompatActivity {
         colourPickerButton = findViewById(R.id.colourPickerButton);
         saveButton = findViewById(R.id.save);
         toolsButton = findViewById(R.id.Tools);
-        colourCopyButton = findViewById(R.id.colourSelector);
+        clearCanvasButton = findViewById(R.id.clearCanvas);
+        clearCanvasText = findViewById(R.id.clearCanvasText);
+        fillToolButton = findViewById(R.id.fillTool);
+        showGridButton = findViewById(R.id.showGrid);
+        cancelEyeDropper = findViewById(R.id.cancelEyeDropper);
 
         eyeDropper = new EyeDropper(this, colour);
         mainLayout.addView(eyeDropper);
@@ -109,8 +124,8 @@ public class Drawing extends AppCompatActivity {
                     if (motionEvent.getAction() == MotionEvent.ACTION_DOWN) {
                         // Take coordinates in case the user wants to pan
                         // This stops the canvas jumping
-                        previousCoord[0] = motionEvent.getX();
-                        previousCoord[1] = motionEvent.getY();
+                        previousCoord_panning[0] = motionEvent.getX();
+                        previousCoord_panning[1] = motionEvent.getY();
 
                         // Take time, after 50 milliseconds drawing will start
                         firstTouchTime = System.currentTimeMillis();
@@ -130,8 +145,8 @@ public class Drawing extends AppCompatActivity {
 
                             // *** PANNING ***
                             // Work out the distance fingers have moved
-                            float xdiff = x1 - previousCoord[0];
-                            float ydiff = y1 - previousCoord[1];
+                            float xdiff = x1 - previousCoord_panning[0];
+                            float ydiff = y1 - previousCoord_panning[1];
                             // Reduce distance to slow down and avoid stuttering
                             xdiff /= 1.5;
                             ydiff /= 1.5;
@@ -141,19 +156,26 @@ public class Drawing extends AppCompatActivity {
                             Canvas.setY(Canvas.getY() + ydiff);
 
                             // Set previous coordinates
-                            previousCoord[0] = motionEvent.getX();
-                            previousCoord[1] = motionEvent.getY();
+                            previousCoord_panning[0] = motionEvent.getX();
+                            previousCoord_panning[1] = motionEvent.getY();
 
                             // *** ZOOMING ***
                             // Work out the distance between the fingers
                             double distance = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
                             if (scale) {
-                                double difference = distance - previousDistance;
-                                System.out.println(difference);
-                                double scaleChange = difference / 1000;
-                                System.out.println(scaleChange);
-                                Canvas.setScaleX(Canvas.getScaleX() + (float) scaleChange);
-                                Canvas.setScaleY(Canvas.getScaleY() + (float) scaleChange);
+                                if(Canvas.getScaleX() >= 1) {
+                                    double difference = distance - previousDistance;
+                                    System.out.println(difference);
+                                    double scaleChange = difference / 1000;
+                                    System.out.println(scaleChange);
+                                    Canvas.setScaleX(Canvas.getScaleX() + (float) scaleChange);
+                                    Canvas.setScaleY(Canvas.getScaleY() + (float) scaleChange);
+                                }
+
+                                if(Canvas.getScaleX() < 1) {
+                                    Canvas.setScaleX(1.0f);
+                                    Canvas.setScaleY(1.0f);
+                                }
                             } else {
                                 scale = true;
                             }
@@ -210,32 +232,49 @@ public class Drawing extends AppCompatActivity {
                     }
                 }
                 // Eyedropper tool selected
-                else {
+                else if(eyeDropperEnabled) {
                     if(motionEvent.getAction() == MotionEvent.ACTION_DOWN) {
                         // Show the eyedropper graphic
-                        int[] screenCoordinates = {Math.round(motionEvent.getRawX()), Math.round(motionEvent.getRawY())};
+                        int[] screenCoordinates = {Math.round(motionEvent.getRawX()), Math.round(motionEvent.getRawY()) - 300};
                         int[] coordinates = {Math.round(motionEvent.getX()), Math.round(motionEvent.getY())};
-                        colour = pixels.getPixelColor(coordinates[0], coordinates[1]);
-                        eyeDropper.redraw(colour, screenCoordinates);
+
+                        oldColour = colour;
+                        useOldColour = true;
+
+                        newColour = pixels.getPixelColour(coordinates[0], coordinates[1], true);
+                        eyeDropper.redraw(newColour, screenCoordinates);
                         eyeDropper.setVisibility(View.VISIBLE);
+                        cancelEyeDropper.setVisibility(View.INVISIBLE);
                     }
                     else if(motionEvent.getAction() == MotionEvent.ACTION_MOVE) {
                         // Update the eyedropper graphic
-                        int[] screenCoordinates = {Math.round(motionEvent.getRawX()), Math.round(motionEvent.getRawY()) - 50};
+                        int[] screenCoordinates = {Math.round(motionEvent.getRawX()), Math.round(motionEvent.getRawY()) - 300};
                         int[] coordinates = {Math.round(motionEvent.getX()), Math.round(motionEvent.getY())};
-                        colour = pixels.getPixelColor(coordinates[0], coordinates[1]);
-                        eyeDropper.redraw(colour, screenCoordinates);
+                        newColour = pixels.getPixelColour(coordinates[0], coordinates[1], true);
+                        eyeDropper.redraw(newColour, screenCoordinates);
                     }
                     else if(motionEvent.getAction() == MotionEvent.ACTION_UP) {
                         // Update the eyedropper graphic and return back to drawing
-                        int[] screenCoordinates = {Math.round(motionEvent.getRawX()), Math.round(motionEvent.getRawY())};
+                        int[] screenCoordinates = {Math.round(motionEvent.getRawX()), Math.round(motionEvent.getRawY()) - 300};
                         int[] coordinates = {Math.round(motionEvent.getX()), Math.round(motionEvent.getY())};
-                        colour = pixels.getPixelColor(coordinates[0], coordinates[1]);
-                        eyeDropper.redraw(colour, screenCoordinates);
+
+                        newColour = pixels.getPixelColour(coordinates[0], coordinates[1], true);
+                        eyeDropper.redraw(newColour, screenCoordinates);
+                        eyeDropper.setVisibility(View.INVISIBLE);
 
                         canDraw = true;
-                        eyeDropper.setVisibility(View.INVISIBLE);
-                        colourCopyButton.setBackgroundTintList(ColorStateList.valueOf(getResources().getColor(R.color.colorAccent)));
+                        eyeDropperEnabled = false;
+                        colourPickerButton.callOnClick();
+                    }
+                }
+                else if(fillToolEnabled) {
+                    if(motionEvent.getAction() == MotionEvent.ACTION_UP) {
+                        int[] coordinates = {Math.round(motionEvent.getX()), Math.round(motionEvent.getY())};
+                        fill(pixels.convertFingerToPixelCoords(coordinates[0], coordinates[1]), pixels.getPixelColour(coordinates[0], coordinates[1], true));
+
+                        fillToolButton.setBackgroundTintList(ColorStateList.valueOf(getResources().getColor(R.color.colorAccent)));
+                        canDraw = true;
+                        fillToolEnabled = false;
                     }
                 }
 
@@ -247,6 +286,12 @@ public class Drawing extends AppCompatActivity {
         colourPickerButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                if(fillToolEnabled) {
+                    fillToolEnabled = false;
+                    canDraw = true;
+                    fillToolButton.setBackgroundTintList(ColorStateList.valueOf(getResources().getColor(R.color.colorAccent)));
+                }
+
                 // Create popup window
                 LayoutInflater inflater = (LayoutInflater) Drawing.this.getSystemService(LAYOUT_INFLATER_SERVICE);
                 final View customView = inflater.inflate(R.layout.colour_picker_popup_window, null);
@@ -254,22 +299,23 @@ public class Drawing extends AppCompatActivity {
 
                 // Find views
                 final ColorPicker picker = customView.findViewById(R.id.picker);
-                ImageButton close = customView.findViewById(R.id.close);
-                Button submit = customView.findViewById(R.id.submit);
+                FloatingActionButton submit = customView.findViewById(R.id.submit);
+                FloatingActionButton eyeDropper = customView.findViewById(R.id.eyeDropper);
                 SVBar svBar = customView.findViewById(R.id.SVBar);
 
                 // Set up SVbar
                 picker.addSVBar(svBar);
 
-                picker.setOldCenterColor(colour);
-
-                close.setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View view) {
-                        // Close popup window
-                        popupWindow.dismiss();
-                    }
-                });
+                if(useOldColour) {
+                    picker.setOldCenterColor(oldColour);
+                    picker.setNewCenterColor(newColour);
+                    picker.setColor(newColour);
+                    useOldColour = false;
+                } else {
+                    picker.setOldCenterColor(colour);
+                    picker.setNewCenterColor(colour);
+                    picker.setColor(colour);
+                }
 
                 submit.setOnClickListener(new View.OnClickListener() {
                     @Override
@@ -277,6 +323,17 @@ public class Drawing extends AppCompatActivity {
                         // Set the colour
                         colour = picker.getColor();
                         popupWindow.dismiss();
+                    }
+                });
+
+                eyeDropper.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View view) {
+                        canDraw = false;
+                        eyeDropperEnabled = true;
+                        popupWindow.dismiss();
+
+                        cancelEyeDropper.setVisibility(View.VISIBLE);
                     }
                 });
 
@@ -325,22 +382,64 @@ public class Drawing extends AppCompatActivity {
             public void onClick(View view) {
                 toolsVisible = !toolsVisible;
                 if(toolsVisible) {
-                    colourCopyButton.setVisibility(View.VISIBLE);
+                    clearCanvasButton.setVisibility(View.VISIBLE);
+                    clearCanvasText.setVisibility(View.VISIBLE);
+                    fillToolButton.setVisibility(View.VISIBLE);
+                    showGridButton.setVisibility(View.VISIBLE);
+
+                    toolsButton.setBackgroundTintList(ColorStateList.valueOf(getResources().getColor(R.color.colorPrimaryDark)));
                 } else {
-                    colourCopyButton.setVisibility(View.INVISIBLE);
+                    clearCanvasButton.setVisibility(View.INVISIBLE);
+                    clearCanvasText.setVisibility(View.INVISIBLE);
+                    fillToolButton.setVisibility(View.INVISIBLE);
+                    showGridButton.setVisibility(View.INVISIBLE);
+
+                    toolsButton.setBackgroundTintList(ColorStateList.valueOf(getResources().getColor(R.color.colorAccent)));
                 }
             }
         });
 
-        colourCopyButton.setOnClickListener(new View.OnClickListener() {
+        clearCanvasButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                pixels.clearCanvas();
+            }
+        });
+
+        fillToolButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                fillToolEnabled = !fillToolEnabled;
                 canDraw = !canDraw;
-                if(!canDraw) {
-                    colourCopyButton.setBackgroundTintList(ColorStateList.valueOf(getResources().getColor(R.color.colorPrimaryDark)));
+                if(fillToolEnabled) {
+                    fillToolButton.setBackgroundTintList(ColorStateList.valueOf(getResources().getColor(R.color.colorPrimaryDark)));
                 } else {
-                    colourCopyButton.setBackgroundTintList(ColorStateList.valueOf(getResources().getColor(R.color.colorAccent)));
+                    fillToolButton.setBackgroundTintList(ColorStateList.valueOf(getResources().getColor(R.color.colorAccent)));
                 }
+            }
+        });
+
+        showGridButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                if(pixels.showGrid) {
+                    pixels.removeGrid();
+                    showGridButton.setBackgroundTintList(ColorStateList.valueOf(getResources().getColor(R.color.colorAccent)));
+                } else {
+                    pixels.drawGrid();
+                    showGridButton.setBackgroundTintList(ColorStateList.valueOf(getResources().getColor(R.color.colorPrimaryDark)));
+                }
+            }
+        });
+
+        cancelEyeDropper.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                canDraw = true;
+                eyeDropperEnabled = false;
+
+                cancelEyeDropper.setVisibility(View.INVISIBLE);
+                colourPickerButton.callOnClick();
             }
         });
     }
@@ -349,10 +448,7 @@ public class Drawing extends AppCompatActivity {
         // Loop through drawQueue
         for (int i = 0; i < drawQueue.size(); i++) {
             int[] coord = (int[]) drawQueue.get(i);
-//            System.out.println("Coord: [" + coord[0] + ", " + coord[1] + "]"
-//                    + "\nprevious: [" + previousCoord[0] + ", " + previousCoord[1] + "]");
 
-            System.out.println(i);
             if(lastDrawn != null) {
                 // Work out the distance between the current coordinate and the previous coordinate
 
@@ -360,32 +456,50 @@ public class Drawing extends AppCompatActivity {
                 int yDist = coord[1] - lastDrawn[1];
 
                 long distance = Math.round(Math.sqrt(Math.pow(xDist, 2) + Math.pow(yDist, 2)));
-//                System.out.println("Distance: " + distance + "\nX: " + xDist + "\nY: " + yDist +
-//                "\nX^2: " + Math.pow(xDist, 2) + "\nY^2: " + Math.pow(yDist, 2));
 
                 // If this distance is greater than the side of a pixel
                 float size = pixels.getSize();
                 if(distance > size) {
-                    System.out.println("Test");
                     int multiplier = Math.round(distance/size);
 
                     float x = xDist/multiplier;
                     float y = yDist/multiplier;
 
                     for(int j=1; j < multiplier+1; j++) {
+
                         int[] newCoord = {Math.round(lastDrawn[0] + (j*x)), Math.round(lastDrawn[1] + (j*y))};
-                        pixels.changePixelColor(newCoord[0], newCoord[1], colour);
+                        pixels.changePixelColor(newCoord[0], newCoord[1], colour, true);
                     }
                 }
             }
 
-            pixels.changePixelColor(coord[0], coord[1], colour);
-            lastDrawn = (int[]) drawQueue.get(i);
+            pixels.changePixelColor(coord[0], coord[1], colour, true);
+            lastDrawn = coord;
         }
 
         if(fingerUp) {
             lastDrawn = null;
         }
         drawQueue.clear();
+    }
+
+    // Fill tool method
+    public void fill(int[] coordinates, int originalColour) {
+        int x = coordinates[0];
+        int y = coordinates[1];
+        // If the pixels colour is the same as the original colour change the pixels colour to the new
+        // colour and recursively call adjacent pixels.
+        if(pixels.getPixelColour(x, y, false) == originalColour) {
+            pixels.changePixelColor(x, y, colour, false);
+
+            int[][] surrounding = {{x+1, y}, {x-1, y}, {x, y+1}, {x, y-1}};
+            for(int i = 0; i < surrounding.length; i++) {
+                // If the adjacent pixel is in bounds recursively call with that pixel
+                if(surrounding[i][0] < pixels.getPixelsWidth() && surrounding[i][1] < pixels.getPixelsHeight()
+                        && surrounding[i][0] >= 0 && surrounding[i][1] >= 0) {
+                    fill(surrounding[i], originalColour);
+                }
+            }
+        }
     }
 }

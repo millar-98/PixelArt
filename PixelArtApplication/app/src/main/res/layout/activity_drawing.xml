@@ -8,6 +8,19 @@
     android:background="@color/colorPrimary"
     tools:context="com.example.millar.pixelartapplication.Drawing">
 
+    <android.support.design.widget.FloatingActionButton
+        android:id="@+id/cancelEyeDropper"
+        android:layout_width="31dp"
+        android:layout_height="28dp"
+        android:layout_marginStart="8dp"
+        android:layout_marginTop="8dp"
+        android:clickable="true"
+        android:visibility="invisible"
+        app:fabSize="mini"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:srcCompat="@drawable/ic_close" />
+
     <android.support.constraint.ConstraintLayout
         android:id="@+id/layout"
         android:layout_width="match_parent"
@@ -21,18 +34,46 @@
     </android.support.constraint.ConstraintLayout>
 
     <android.support.design.widget.FloatingActionButton
-        android:id="@+id/colourSelector"
+        android:id="@+id/clearCanvas"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="8dp"
         android:layout_marginEnd="8dp"
         android:layout_marginStart="8dp"
         android:clickable="true"
         android:visibility="invisible"
-        app:layout_constraintBottom_toTopOf="@+id/Tools"
+        app:layout_constraintBottom_toTopOf="@+id/clearCanvasText"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toEndOf="@+id/colourPickerButton"
-        app:srcCompat="@drawable/ic_colour_selector" />
+        app:srcCompat="@drawable/ic_close" />
+
+    <android.support.design.widget.FloatingActionButton
+        android:id="@+id/fillTool"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="8dp"
+        android:layout_marginStart="8dp"
+        android:clickable="true"
+        android:visibility="invisible"
+        app:layout_constraintBottom_toTopOf="@+id/clearCanvasText"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:srcCompat="@drawable/ic_fill" />
+
+    <TextView
+        android:id="@+id/clearCanvasText"
+        android:layout_width="46dp"
+        android:layout_height="12dp"
+        android:layout_marginBottom="8dp"
+        android:layout_marginEnd="8dp"
+        android:layout_marginStart="8dp"
+        android:text="clear canvas"
+        android:textColor="@android:color/black"
+        android:textSize="8sp"
+        android:visibility="invisible"
+        app:layout_constraintBottom_toTopOf="@+id/Tools"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.489"
+        app:layout_constraintStart_toEndOf="@+id/colourPickerButton" />
 
     <android.support.design.widget.FloatingActionButton
         android:id="@+id/Tools"
@@ -72,5 +113,20 @@
         app:layout_constraintEnd_toStartOf="@+id/colourPickerButton"
         app:layout_constraintStart_toStartOf="parent"
         app:srcCompat="@drawable/ic_save" />
+
+    <android.support.design.widget.FloatingActionButton
+        android:id="@+id/showGrid"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="8dp"
+        android:layout_marginStart="8dp"
+        android:background="@drawable/ic_grid"
+        android:clickable="true"
+        android:visibility="invisible"
+        app:backgroundTint="@color/colorPrimaryDark"
+        app:layout_constraintBottom_toBottomOf="@+id/clearCanvas"
+        app:layout_constraintEnd_toStartOf="@+id/fillTool"
+        app:layout_constraintStart_toStartOf="parent"
+        app:srcCompat="@drawable/ic_grid" />
 
 </android.support.constraint.ConstraintLayout>

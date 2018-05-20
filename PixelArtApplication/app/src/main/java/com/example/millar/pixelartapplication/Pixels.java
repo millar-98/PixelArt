@@ -1,22 +1,18 @@
 package com.example.millar.pixelartapplication;
 
 import android.content.Context;
-import android.content.ContextWrapper;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
-import android.os.Environment;
+import android.graphics.Color;
 import android.view.View;
 
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import java.io.FileReader;
 import java.io.FileWriter;
-import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.util.ArrayList;
 
 /**
  * Created by milla on 30/03/2018.
@@ -25,10 +21,11 @@ import java.util.ArrayList;
 public class Pixels extends View {
     private Context context;
     private int backgroundColour;
-    private int width;
-    private int height;
+    private int pixelsWidth;
+    private int pixelsHeight;
     private int size;
     private Bitmap drawingBitmap;
+    public boolean showGrid;
 
     public Pixels(Context c, int bc, int w, int h, int s) {
         // New drawing
@@ -36,20 +33,26 @@ public class Pixels extends View {
         context = c;
 
         backgroundColour = bc;
-        width = w;
-        height = h;
+        pixelsWidth = w;
+        pixelsHeight = h;
         size = s;
+        showGrid = true;
 
         // Initialize the bitmap
-        drawingBitmap = Bitmap.createBitmap(width*size, height*size, Bitmap.Config.ARGB_8888);
+        drawingBitmap = Bitmap.createBitmap(pixelsWidth *size, pixelsHeight *size, Bitmap.Config.ARGB_8888);
         drawingBitmap.eraseColor(backgroundColour);
+
+        drawGrid();
     }
 
     public Pixels(Context c, String fileName) {
         // Load saved drawing
         super(c);
         context = c;
+        showGrid = true;
+
         load(fileName);
+        drawGrid();
     }
 
     @Override
@@ -64,30 +67,88 @@ public class Pixels extends View {
         return true;
     }
 
-    public void changePixelColor(int xcoord, int ycoord, int color) {
+    public void drawGrid() {
+        showGrid = true;
+        for(int xcoord = 0; xcoord < pixelsWidth; xcoord++) {
+            for(int ycoord = 0; ycoord < pixelsHeight; ycoord++) {
+                for(int x = xcoord*size; x < xcoord*size+size; x++) {
+                    drawingBitmap.setPixel(x, ycoord*size, Color.BLACK);
+                }
+                for(int y = ycoord*size; y < ycoord*size+size; y++) {
+                    drawingBitmap.setPixel(xcoord*size, y, Color.BLACK);
+                }
+            }
+        }
+
+        this.invalidate();
+    }
+
+    public void removeGrid() {
+        showGrid = false;
+
+        for(int xcoord = 0; xcoord < pixelsWidth; xcoord++) {
+            for(int ycoord = 0; ycoord < pixelsHeight; ycoord++) {
+                int colour = getPixelColour(xcoord, ycoord, false);
+                for(int x = xcoord*size; x < xcoord*size+size; x++) {
+                    drawingBitmap.setPixel(x, ycoord*size, colour);
+                }
+                for(int y = ycoord*size; y < ycoord*size+size; y++) {
+                    drawingBitmap.setPixel(xcoord*size, y, colour);
+                }
+            }
+        }
+
+        this.invalidate();
+    }
+
+    public int[] convertFingerToPixelCoords(int xcoord, int ycoord) {
         // This will find the positions in the top left corner of the pixel
         xcoord /= size;
         ycoord /= size;
 
         // Stop out of range exceptions occurring
-        if(xcoord >= width) {
-            xcoord = width-1;
+        if(xcoord >= pixelsWidth) {
+            xcoord = pixelsWidth -1;
         }
         else if(xcoord < 0) {
             xcoord = 0;
         }
-        if(ycoord >= height) {
-            ycoord = height-1;
+        if(ycoord >= pixelsHeight) {
+            ycoord = pixelsHeight -1;
         }
         else if(ycoord < 0) {
             ycoord = 0;
         }
 
-        if(drawingBitmap.getPixel(xcoord*size, ycoord*size) != color) {
+        int[] pixelCoords = {xcoord, ycoord};
+
+        return pixelCoords;
+    }
+
+    public void changePixelColor(int xcoord, int ycoord, int color, boolean fingerCoords) {
+        if(fingerCoords) {
+            int[] pixelCoords = convertFingerToPixelCoords(xcoord, ycoord);
+            xcoord = pixelCoords[0];
+            ycoord = pixelCoords[1];
+        }
+
+        if(drawingBitmap.getPixel(xcoord*size + 2, ycoord*size + 2) != color) {
+            int xCount = 0;
             for (int x = xcoord * size; x < xcoord * size + size; x++) {
+                int yCount = 0;
                 for (int y = ycoord * size; y < ycoord * size + size; y++) {
-                    drawingBitmap.setPixel(x, y, color);
+                    if(showGrid) {
+//                        if(xCount != 0 && xCount != size-1 && yCount != 0 && yCount != size-1) {
+                        if(xCount != 0 && yCount != 0) {
+                            drawingBitmap.setPixel(x, y, color);
+                        }
+                    }
+                    else {
+                        drawingBitmap.setPixel(x, y, color);
+                    }
+                    yCount++;
                 }
+                xCount++;
             }
 
             // Redraw the screen
@@ -95,31 +156,24 @@ public class Pixels extends View {
         }
     }
 
-    public int getPixelColor(int xcoord, int ycoord) {
-        int colour;
-
-        // This will find the positions in the top left corner of the pixel
-        xcoord /= size;
-        ycoord /= size;
-
-        // Stop out of range exceptions occurring
-        if(xcoord >= width) {
-            xcoord = width-1;
-        }
-        else if(xcoord < 0) {
-            xcoord = 0;
-        }
-        if(ycoord >= height) {
-            ycoord = height-1;
-        }
-        else if(ycoord < 0) {
-            ycoord = 0;
+    public int getPixelColour(int xcoord, int ycoord, boolean fingerCoords) {
+        if(fingerCoords) {
+            int[] pixelCoords = convertFingerToPixelCoords(xcoord, ycoord);
+            xcoord = pixelCoords[0];
+            ycoord = pixelCoords[1];
         }
 
-        colour = drawingBitmap.getPixel(xcoord*size, ycoord*size);
+        return drawingBitmap.getPixel(xcoord*size + 2, ycoord*size + 2);
+    }
 
-        System.out.println("Colour: " + colour + "\nX: " + xcoord + "\nY: " + ycoord);
-        return colour;
+    public void clearCanvas() {
+        drawingBitmap.eraseColor(backgroundColour);
+
+        if(showGrid) {
+            drawGrid();
+        }
+
+        this.invalidate();
     }
 
     public void save(String fileName) {
@@ -134,9 +188,9 @@ public class Pixels extends View {
 
             textFileWriter.append(Integer.toString(backgroundColour));
             textFileWriter.write(",");
-            textFileWriter.write(Integer.toString(width));
+            textFileWriter.write(Integer.toString(pixelsWidth));
             textFileWriter.write(",");
-            textFileWriter.write(Integer.toString(height));
+            textFileWriter.write(Integer.toString(pixelsHeight));
             textFileWriter.write(",");
             textFileWriter.write(Integer.toString(size));
 
@@ -176,10 +230,10 @@ public class Pixels extends View {
                     backgroundColour = Integer.parseInt(lineValues[i]);
                     break;
                 case 1:
-                    width = Integer.parseInt(lineValues[i]);
+                    pixelsWidth = Integer.parseInt(lineValues[i]);
                     break;
                 case 2:
-                    height = Integer.parseInt(lineValues[i]);
+                    pixelsHeight = Integer.parseInt(lineValues[i]);
                     break;
                 case 3:
                     size = Integer.parseInt(lineValues[i]);
@@ -195,5 +249,11 @@ public class Pixels extends View {
 
     public int getSize() {
         return size;
+    }
+    public int getPixelsWidth() {
+        return pixelsWidth;
+    }
+    public int getPixelsHeight() {
+        return pixelsHeight;
     }
 }

@@ -47,7 +47,7 @@ public class newDrawing extends AppCompatActivity {
             public void onClick(View view) {
                 LayoutInflater inflater = (LayoutInflater) newDrawing.this.getSystemService(LAYOUT_INFLATER_SERVICE);
                 final View customView = inflater.inflate(R.layout.dimensions_popup_window, null);
-                final PopupWindow popupWindow = new PopupWindow(customView, 1500, 1000, true);
+                final PopupWindow popupWindow = new PopupWindow(customView, 1300, 1000, true);
 
                 // TODO: Make this in a for loop somehow!!
                 Button[] buttons = new Button[6];
@@ -56,7 +56,6 @@ public class newDrawing extends AppCompatActivity {
                 buttons[2] = customView.findViewById(R.id.b32);
                 buttons[3] = customView.findViewById(R.id.b64);
                 buttons[4] = customView.findViewById(R.id.b128);
-                buttons[5] = customView.findViewById(R.id.b256);
 
                 buttons[0].setOnClickListener(new View.OnClickListener() {
                     @Override
@@ -108,16 +107,6 @@ public class newDrawing extends AppCompatActivity {
                         dimensions.setText(dimensionsText);
                     }
                 });
-                buttons[5].setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View view) {
-                        width = 256;
-                        height = 256;
-
-                        String dimensionsText = width + " X " + height;
-                        dimensions.setText(dimensionsText);
-                    }
-                });
 
                 popupWindow.showAtLocation(layout, Gravity.CENTER, 0, 0);
             }
@@ -135,6 +124,7 @@ public class newDrawing extends AppCompatActivity {
                 Point size = new Point();
                 display.getSize(size);
                 int size_int = size.x / width;
+                System.out.println(size.x + " " + size_int);
                 int backgroundColour = colorPicker.getColor();
 
                 // Pass parameters

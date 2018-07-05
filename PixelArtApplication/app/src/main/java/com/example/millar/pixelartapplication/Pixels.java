@@ -176,6 +176,16 @@ public class Pixels extends View {
         this.invalidate();
     }
 
+    private void backgroundColourChanged(int oldBackgroundColour) {
+        for(int x = 0; x < pixelsWidth; x++) {
+            for(int y = 0; y < pixelsHeight; y++) {
+                if(getPixelColour(x, y, false) == oldBackgroundColour) {
+                    changePixelColor(x, y, backgroundColour, false);
+                }
+            }
+        }
+    }
+
     public void save(String fileName) {
         try {
             // Write to the txt file
@@ -210,41 +220,41 @@ public class Pixels extends View {
     }
 
     public boolean load(String fileName) {
-    try {
-        // Initialize bitmap
-        System.out.println(fileName);
-        File f = new File(context.getFilesDir(),"/Drawings/" + fileName + ".png");
-        drawingBitmap = BitmapFactory.decodeStream(new FileInputStream(f)).copy(Bitmap.Config.ARGB_8888, true);
+        try {
+            // Initialize bitmap
+            System.out.println(fileName);
+            File f = new File(context.getFilesDir(),"/Drawings/" + fileName + ".png");
+            drawingBitmap = BitmapFactory.decodeStream(new FileInputStream(f)).copy(Bitmap.Config.ARGB_8888, true);
 
-        // Get variables
-        File textFile = new File(context.getFilesDir() + "/Drawings/" + fileName + ".txt");
-        FileInputStream inputStream = new FileInputStream(textFile);
-        InputStreamReader reader = new InputStreamReader(inputStream);
-        BufferedReader bufferedReader = new BufferedReader(reader);
+            // Get variables
+            File textFile = new File(context.getFilesDir() + "/Drawings/" + fileName + ".txt");
+            FileInputStream inputStream = new FileInputStream(textFile);
+            InputStreamReader reader = new InputStreamReader(inputStream);
+            BufferedReader bufferedReader = new BufferedReader(reader);
 
-        String line = bufferedReader.readLine();
-        String[] lineValues = line.split(",");
-        for(int i = 0; i < lineValues.length; i++) {
-            switch (i) {
-                case 0:
-                    backgroundColour = Integer.parseInt(lineValues[i]);
-                    break;
-                case 1:
-                    pixelsWidth = Integer.parseInt(lineValues[i]);
-                    break;
-                case 2:
-                    pixelsHeight = Integer.parseInt(lineValues[i]);
-                    break;
-                case 3:
-                    size = Integer.parseInt(lineValues[i]);
-                    break;
+            String line = bufferedReader.readLine();
+            String[] lineValues = line.split(",");
+            for(int i = 0; i < lineValues.length; i++) {
+                switch (i) {
+                    case 0:
+                        backgroundColour = Integer.parseInt(lineValues[i]);
+                        break;
+                    case 1:
+                        pixelsWidth = Integer.parseInt(lineValues[i]);
+                        break;
+                    case 2:
+                        pixelsHeight = Integer.parseInt(lineValues[i]);
+                        break;
+                    case 3:
+                        size = Integer.parseInt(lineValues[i]);
+                        break;
+                }
             }
+            return true;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
         }
-        return true;
-    } catch (Exception e) {
-        e.printStackTrace();
-        return false;
-    }
     }
 
     public int getSize() {
@@ -255,5 +265,13 @@ public class Pixels extends View {
     }
     public int getPixelsHeight() {
         return pixelsHeight;
+    }
+    public int getBackgroundColour() {
+        return backgroundColour;
+    }
+    public void setBackgroundColour(int colour) {
+        int oldBackgroundColour = backgroundColour;
+        backgroundColour = colour;
+        backgroundColourChanged(oldBackgroundColour);
     }
 }

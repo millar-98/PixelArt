@@ -2,10 +2,12 @@ package com.example.millar.pixelartapplication;
 
 import android.content.res.ColorStateList;
 import android.graphics.Color;
+import android.graphics.Point;
 import android.support.constraint.ConstraintLayout;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.view.Display;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
@@ -13,6 +15,7 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.PopupWindow;
+import android.widget.TabHost;
 import android.widget.TextView;
 
 import java.lang.Math;
@@ -30,8 +33,12 @@ public class Drawing extends AppCompatActivity {
     FloatingActionButton clearCanvasButton;
     FloatingActionButton showGridButton;
     FloatingActionButton fillToolButton;
-    FloatingActionButton cancelEyeDropper;
+    FloatingActionButton cancelEyeDropperButton;
+    FloatingActionButton centerCanvasButton;
+    FloatingActionButton eraserButton;
     TextView clearCanvasText;
+
+    Point displayPoint;
 
     boolean toolsVisible;
 
@@ -39,10 +46,13 @@ public class Drawing extends AppCompatActivity {
     ArrayList drawQueue;
     Pixels pixels;
     int colour;
+    boolean erase;
+    int offset;
 
     // Tools
     boolean canDraw;
     boolean eyeDropperEnabled;
+    boolean eyeDropperBackground;
     boolean useOldColour;
     int oldColour;
     int newColour;
@@ -67,7 +77,6 @@ public class Drawing extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        System.out.println("onCreate");
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_drawing);
 
@@ -94,7 +103,9 @@ public class Drawing extends AppCompatActivity {
         clearCanvasText = findViewById(R.id.clearCanvasText);
         fillToolButton = findViewById(R.id.fillTool);
         showGridButton = findViewById(R.id.showGrid);
-        cancelEyeDropper = findViewById(R.id.cancelEyeDropper);
+        cancelEyeDropperButton = findViewById(R.id.cancelEyeDropper);
+        centerCanvasButton = findViewById(R.id.centerCanvas);
+        eraserButton = findViewById(R.id.eraser);
 
         eyeDropper = new EyeDropper(this, colour);
         mainLayout.addView(eyeDropper);
@@ -114,6 +125,13 @@ public class Drawing extends AppCompatActivity {
             saved = false;
         }
         Canvas.addView(pixels);
+
+        final Display display = getWindowManager().getDefaultDisplay();
+        displayPoint = new Point();
+        display.getSize(displayPoint);
+        offset = ((displayPoint.x) - (pixels.getSize()*pixels.getPixelsWidth()))/2;
+
+        centerCanvasButton.callOnClick();
 
         // pixels onTouchListener
         pixels.setOnTouchListener(new View.OnTouchListener() {
@@ -165,16 +183,14 @@ public class Drawing extends AppCompatActivity {
                             if (scale) {
                                 if(Canvas.getScaleX() >= 1) {
                                     double difference = distance - previousDistance;
-                                    System.out.println(difference);
                                     double scaleChange = difference / 1000;
-                                    System.out.println(scaleChange);
                                     Canvas.setScaleX(Canvas.getScaleX() + (float) scaleChange);
                                     Canvas.setScaleY(Canvas.getScaleY() + (float) scaleChange);
                                 }
 
                                 if(Canvas.getScaleX() < 1) {
-                                    Canvas.setScaleX(1.0f);
-                                    Canvas.setScaleY(1.0f);
+                                    Canvas.setScaleX(1);
+                                    Canvas.setScaleY(1);
                                 }
                             } else {
                                 scale = true;
@@ -244,7 +260,7 @@ public class Drawing extends AppCompatActivity {
                         newColour = pixels.getPixelColour(coordinates[0], coordinates[1], true);
                         eyeDropper.redraw(newColour, screenCoordinates);
                         eyeDropper.setVisibility(View.VISIBLE);
-                        cancelEyeDropper.setVisibility(View.INVISIBLE);
+                        cancelEyeDropperButton.setVisibility(View.INVISIBLE);
                     }
                     else if(motionEvent.getAction() == MotionEvent.ACTION_MOVE) {
                         // Update the eyedropper graphic
@@ -295,9 +311,32 @@ public class Drawing extends AppCompatActivity {
                 // Create popup window
                 LayoutInflater inflater = (LayoutInflater) Drawing.this.getSystemService(LAYOUT_INFLATER_SERVICE);
                 final View customView = inflater.inflate(R.layout.colour_picker_popup_window, null);
-                final PopupWindow popupWindow = new PopupWindow(customView, 1000, 1500, true);
+
+                int width = (int) Math.round(displayPoint.x * 0.8);
+                int height = (int) Math.round(displayPoint.y * 0.8);
+
+                final PopupWindow popupWindow = new PopupWindow(customView, width, height, true);
 
                 // Find views
+                TabHost tabHost = customView.findViewById(R.id.tabHost);
+                tabHost.setup();
+
+                TabHost.TabSpec spec = tabHost.newTabSpec("Colour");
+                spec.setContent(R.id.colour);
+                spec.setIndicator("Colour");
+                tabHost.addTab(spec);
+
+                spec = tabHost.newTabSpec("Background Colour");
+                spec.setContent(R.id.backgroundColour);
+                spec.setIndicator("Background Colour");
+                tabHost.addTab(spec);
+
+                if(eyeDropperBackground) {
+                    tabHost.setCurrentTab(1);
+                } else {
+                    tabHost.setCurrentTab(0);
+                }
+
                 final ColorPicker picker = customView.findViewById(R.id.picker);
                 FloatingActionButton submit = customView.findViewById(R.id.submit);
                 FloatingActionButton eyeDropper = customView.findViewById(R.id.eyeDropper);
@@ -306,7 +345,7 @@ public class Drawing extends AppCompatActivity {
                 // Set up SVbar
                 picker.addSVBar(svBar);
 
-                if(useOldColour) {
+                if(useOldColour && !eyeDropperBackground) {
                     picker.setOldCenterColor(oldColour);
                     picker.setNewCenterColor(newColour);
                     picker.setColor(newColour);
@@ -333,12 +372,51 @@ public class Drawing extends AppCompatActivity {
                         eyeDropperEnabled = true;
                         popupWindow.dismiss();
 
-                        cancelEyeDropper.setVisibility(View.VISIBLE);
+                        cancelEyeDropperButton.setVisibility(View.VISIBLE);
+                    }
+                });
+
+                final ColorPicker picker2 = customView.findViewById(R.id.picker2);
+                FloatingActionButton submit2 = customView.findViewById(R.id.submit2);
+                FloatingActionButton eyeDropper2 = customView.findViewById(R.id.eyeDropper2);
+                SVBar svBar2 = customView.findViewById(R.id.SVBar2);
+
+                if(eyeDropperBackground) {
+                    picker2.addSVBar(svBar2);
+                    picker2.setOldCenterColor(pixels.getBackgroundColour());
+                    picker2.setNewCenterColor(newColour);
+                    picker2.setColor(newColour);
+                    eyeDropperBackground = false;
+                    useOldColour = false;
+                } else {
+                    picker2.addSVBar(svBar2);
+                    picker2.setOldCenterColor(pixels.getBackgroundColour());
+                    picker2.setNewCenterColor(pixels.getBackgroundColour());
+                    picker2.setColor(pixels.getBackgroundColour());
+                }
+
+                submit2.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View view) {
+                        pixels.setBackgroundColour(picker2.getColor());
+                        popupWindow.dismiss();
+                    }
+                });
+
+                eyeDropper2.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View view) {
+                        canDraw = false;
+                        eyeDropperEnabled = true;
+                        eyeDropperBackground = true;
+                        popupWindow.dismiss();
+
+                        cancelEyeDropperButton.setVisibility(View.VISIBLE);
                     }
                 });
 
                 // Show popup window
-                popupWindow.showAtLocation(mainLayout, Gravity.CENTER, 0, 0);
+                popupWindow.showAtLocation(mainLayout, Gravity.CENTER, 0, -100);
             }
         });
 
@@ -350,7 +428,11 @@ public class Drawing extends AppCompatActivity {
                     // If this is an unsaved drawing, prompt user for the name
                     LayoutInflater inflater = (LayoutInflater) Drawing.this.getSystemService(LAYOUT_INFLATER_SERVICE);
                     final View customView = inflater.inflate(R.layout.save_popup_window, null);
-                    final PopupWindow popupWindow = new PopupWindow(customView, 1000, 1500, true);
+
+                    int width = (int) Math.round(displayPoint.x * 0.8);
+                    int height = (int) Math.round(displayPoint.y * 0.5);
+
+                    final PopupWindow popupWindow = new PopupWindow(customView, width, height, true);
 
                     final EditText fileNameEdit = customView.findViewById(R.id.popup_file_name);
                     final Button save = customView.findViewById(R.id.popup_save);
@@ -386,6 +468,8 @@ public class Drawing extends AppCompatActivity {
                     clearCanvasText.setVisibility(View.VISIBLE);
                     fillToolButton.setVisibility(View.VISIBLE);
                     showGridButton.setVisibility(View.VISIBLE);
+                    centerCanvasButton.setVisibility(View.VISIBLE);
+                    eraserButton.setVisibility(View.VISIBLE);
 
                     toolsButton.setBackgroundTintList(ColorStateList.valueOf(getResources().getColor(R.color.colorPrimaryDark)));
                 } else {
@@ -393,6 +477,8 @@ public class Drawing extends AppCompatActivity {
                     clearCanvasText.setVisibility(View.INVISIBLE);
                     fillToolButton.setVisibility(View.INVISIBLE);
                     showGridButton.setVisibility(View.INVISIBLE);
+                    centerCanvasButton.setVisibility(View.INVISIBLE);
+                    eraserButton.setVisibility(View.INVISIBLE);
 
                     toolsButton.setBackgroundTintList(ColorStateList.valueOf(getResources().getColor(R.color.colorAccent)));
                 }
@@ -432,14 +518,36 @@ public class Drawing extends AppCompatActivity {
             }
         });
 
-        cancelEyeDropper.setOnClickListener(new View.OnClickListener() {
+        cancelEyeDropperButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 canDraw = true;
                 eyeDropperEnabled = false;
 
-                cancelEyeDropper.setVisibility(View.INVISIBLE);
+                cancelEyeDropperButton.setVisibility(View.INVISIBLE);
                 colourPickerButton.callOnClick();
+            }
+        });
+
+        centerCanvasButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Canvas.setScaleX(1);
+                Canvas.setScaleY(1);
+                Canvas.setX(offset);
+                Canvas.setY(offset);
+            }
+        });
+
+        eraserButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                erase = !erase;
+                if(erase) {
+                    eraserButton.setBackgroundTintList(ColorStateList.valueOf(getResources().getColor(R.color.colorPrimaryDark)));
+                } else {
+                    eraserButton.setBackgroundTintList(ColorStateList.valueOf(getResources().getColor(R.color.colorAccent)));
+                }
             }
         });
     }
@@ -468,12 +576,20 @@ public class Drawing extends AppCompatActivity {
                     for(int j=1; j < multiplier+1; j++) {
 
                         int[] newCoord = {Math.round(lastDrawn[0] + (j*x)), Math.round(lastDrawn[1] + (j*y))};
-                        pixels.changePixelColor(newCoord[0], newCoord[1], colour, true);
+                        if(erase) {
+                            pixels.changePixelColor(newCoord[0], newCoord[1], pixels.getBackgroundColour(), true);
+                        } else {
+                            pixels.changePixelColor(newCoord[0], newCoord[1], colour, true);
+                        }
                     }
                 }
             }
 
-            pixels.changePixelColor(coord[0], coord[1], colour, true);
+            if(erase) {
+                pixels.changePixelColor(coord[0], coord[1], pixels.getBackgroundColour(), true);
+            } else {
+                pixels.changePixelColor(coord[0], coord[1], colour, true);
+            }
             lastDrawn = coord;
         }
 

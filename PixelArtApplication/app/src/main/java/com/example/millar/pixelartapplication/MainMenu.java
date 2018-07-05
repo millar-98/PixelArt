@@ -53,8 +53,10 @@ public class MainMenu extends AppCompatActivity {
         */
         File filesDir = new File(getFilesDir(), "/Drawings");
         File[] files = filesDir.listFiles();
-        for(int i = 0; i < files.length; i++) {
-            System.out.println(files[i].getName());
+        if(files != null) {
+            for (int i = 0; i < files.length; i++) {
+                System.out.println(files[i].getName());
+            }
         }
 //        String[] files = fileList();
 

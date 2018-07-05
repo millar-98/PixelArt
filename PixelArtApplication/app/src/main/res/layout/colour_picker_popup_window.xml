@@ -7,48 +7,134 @@
     android:layout_height="match_parent"
     android:background="@drawable/colourpicker_bg">
 
-    <com.example.millar.pixelartapplication.ColorPicker
-        android:id="@+id/picker"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+    <TabHost
+        android:id="@+id/tabHost"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_marginBottom="8dp"
         android:layout_marginEnd="8dp"
         android:layout_marginStart="8dp"
         android:layout_marginTop="8dp"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toTopOf="parent">
 
-    <com.example.millar.pixelartapplication.SVBar
-        android:id="@+id/SVBar"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginEnd="8dp"
-        android:layout_marginStart="8dp"
-        android:layout_marginTop="8dp"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/picker" />
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical">
 
-    <android.support.design.widget.FloatingActionButton
-        android:id="@+id/eyeDropper"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="8dp"
-        android:layout_marginTop="8dp"
-        android:clickable="true"
-        app:layout_constraintStart_toStartOf="@+id/SVBar"
-        app:layout_constraintTop_toBottomOf="@+id/SVBar"
-        app:srcCompat="@drawable/ic_colour_selector" />
+            <TabWidget
+                android:id="@android:id/tabs"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
 
-    <android.support.design.widget.FloatingActionButton
-        android:id="@+id/submit"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginEnd="8dp"
-        android:layout_marginTop="8dp"
-        android:clickable="true"
-        app:layout_constraintEnd_toEndOf="@+id/SVBar"
-        app:layout_constraintTop_toBottomOf="@+id/SVBar"
-        app:srcCompat="@drawable/ic_submit" />
+            <FrameLayout
+                android:id="@android:id/tabcontent"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent">
+
+                <android.support.constraint.ConstraintLayout
+                    android:id="@+id/colour"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:orientation="vertical">
+
+                    <com.example.millar.pixelartapplication.ColorPicker
+                        android:id="@+id/picker"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="8dp"
+                        android:layout_marginStart="8dp"
+                        android:layout_marginTop="8dp"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toTopOf="parent" />
+
+                    <com.example.millar.pixelartapplication.SVBar
+                        android:id="@+id/SVBar"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        app:layout_constraintEnd_toEndOf="@+id/picker"
+                        app:layout_constraintStart_toStartOf="@+id/picker"
+                        app:layout_constraintTop_toBottomOf="@+id/picker" />
+
+                    <android.support.design.widget.FloatingActionButton
+                        android:id="@+id/submit"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:layout_marginTop="8dp"
+                        android:clickable="true"
+                        app:layout_constraintStart_toStartOf="@+id/picker"
+                        app:layout_constraintTop_toBottomOf="@+id/SVBar"
+                        app:srcCompat="@drawable/ic_submit" />
+
+                    <android.support.design.widget.FloatingActionButton
+                        android:id="@+id/eyeDropper"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="8dp"
+                        android:layout_marginTop="8dp"
+                        android:clickable="true"
+                        app:layout_constraintEnd_toEndOf="@+id/picker"
+                        app:layout_constraintTop_toBottomOf="@+id/SVBar"
+                        app:srcCompat="@drawable/ic_colour_selector" />
+                </android.support.constraint.ConstraintLayout>
+
+                <android.support.constraint.ConstraintLayout
+                    android:id="@+id/backgroundColour"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:orientation="vertical">
+
+                    <com.example.millar.pixelartapplication.ColorPicker
+                        android:id="@+id/picker2"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="8dp"
+                        android:layout_marginStart="8dp"
+                        android:layout_marginTop="8dp"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toTopOf="parent" />
+
+                    <com.example.millar.pixelartapplication.SVBar
+                        android:id="@+id/SVBar2"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        app:layout_constraintEnd_toEndOf="@+id/picker2"
+                        app:layout_constraintStart_toStartOf="@+id/picker2"
+                        app:layout_constraintTop_toBottomOf="@+id/picker2" />
+
+                    <android.support.design.widget.FloatingActionButton
+                        android:id="@+id/submit2"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:layout_marginTop="8dp"
+                        android:clickable="true"
+                        app:layout_constraintStart_toStartOf="@+id/picker2"
+                        app:layout_constraintTop_toBottomOf="@+id/SVBar2"
+                        app:srcCompat="@drawable/ic_submit" />
+
+                    <android.support.design.widget.FloatingActionButton
+                        android:id="@+id/eyeDropper2"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="8dp"
+                        android:layout_marginTop="8dp"
+                        android:clickable="true"
+                        app:layout_constraintEnd_toEndOf="@+id/picker2"
+                        app:layout_constraintTop_toBottomOf="@+id/SVBar2"
+                        app:srcCompat="@drawable/ic_colour_selector" />
+                </android.support.constraint.ConstraintLayout>
+
+            </FrameLayout>
+        </LinearLayout>
+    </TabHost>
 
 </android.support.constraint.ConstraintLayout>

@@ -9,6 +9,30 @@
     tools:context="com.example.millar.pixelartapplication.Drawing">
 
     <android.support.design.widget.FloatingActionButton
+        android:id="@+id/eraser"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:clickable="true"
+        android:visibility="invisible"
+        app:layout_constraintBottom_toTopOf="@+id/clearCanvasText"
+        app:layout_constraintStart_toStartOf="parent"
+        app:srcCompat="@drawable/ic_erase" />
+
+    <android.support.design.widget.FloatingActionButton
+        android:id="@+id/centerCanvas"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="8dp"
+        android:layout_marginStart="8dp"
+        android:clickable="true"
+        android:visibility="invisible"
+        app:layout_constraintBottom_toBottomOf="@+id/clearCanvas"
+        app:layout_constraintEnd_toStartOf="@+id/clearCanvas"
+        app:layout_constraintStart_toEndOf="@+id/showGrid"
+        app:srcCompat="@drawable/ic_center" />
+
+    <android.support.design.widget.FloatingActionButton
         android:id="@+id/cancelEyeDropper"
         android:layout_width="31dp"
         android:layout_height="28dp"
@@ -21,29 +45,15 @@
         app:layout_constraintTop_toTopOf="parent"
         app:srcCompat="@drawable/ic_close" />
 
-    <android.support.constraint.ConstraintLayout
-        android:id="@+id/layout"
-        android:layout_width="match_parent"
-        android:layout_height="512dp"
-        android:layout_marginBottom="8dp"
-        app:layout_constraintBottom_toTopOf="@+id/colourPickerButton"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent">
-
-    </android.support.constraint.ConstraintLayout>
-
     <android.support.design.widget.FloatingActionButton
         android:id="@+id/clearCanvas"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginEnd="8dp"
-        android:layout_marginStart="8dp"
         android:clickable="true"
         android:visibility="invisible"
         app:layout_constraintBottom_toTopOf="@+id/clearCanvasText"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toEndOf="@+id/colourPickerButton"
         app:srcCompat="@drawable/ic_close" />
 
     <android.support.design.widget.FloatingActionButton
@@ -55,8 +65,8 @@
         android:clickable="true"
         android:visibility="invisible"
         app:layout_constraintBottom_toTopOf="@+id/clearCanvasText"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toStartOf="@+id/showGrid"
+        app:layout_constraintStart_toEndOf="@+id/eraser"
         app:srcCompat="@drawable/ic_fill" />
 
     <TextView
@@ -65,15 +75,12 @@
         android:layout_height="12dp"
         android:layout_marginBottom="8dp"
         android:layout_marginEnd="8dp"
-        android:layout_marginStart="8dp"
         android:text="clear canvas"
         android:textColor="@android:color/black"
         android:textSize="8sp"
         android:visibility="invisible"
         app:layout_constraintBottom_toTopOf="@+id/Tools"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.489"
-        app:layout_constraintStart_toEndOf="@+id/colourPickerButton" />
+        app:layout_constraintEnd_toEndOf="parent" />
 
     <android.support.design.widget.FloatingActionButton
         android:id="@+id/Tools"
@@ -125,8 +132,20 @@
         android:visibility="invisible"
         app:backgroundTint="@color/colorPrimaryDark"
         app:layout_constraintBottom_toBottomOf="@+id/clearCanvas"
-        app:layout_constraintEnd_toStartOf="@+id/fillTool"
+        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:srcCompat="@drawable/ic_grid" />
+
+    <android.support.constraint.ConstraintLayout
+        android:id="@+id/layout"
+        android:layout_width="match_parent"
+        android:layout_height="513dp"
+        android:layout_marginBottom="8dp"
+        app:layout_constraintBottom_toTopOf="@+id/colourPickerButton"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
+
+    </android.support.constraint.ConstraintLayout>
 
 </android.support.constraint.ConstraintLayout>

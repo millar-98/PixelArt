@@ -53,25 +53,15 @@ public class MainMenu extends AppCompatActivity {
         */
         File filesDir = new File(getFilesDir(), "/Drawings");
         File[] files = filesDir.listFiles();
-        if(files != null) {
-            for (int i = 0; i < files.length; i++) {
-                System.out.println(files[i].getName());
-            }
-        }
-//        String[] files = fileList();
 
         // Only want to display the file name with no extension and remove duplicates
         String[] filesList;
         if(files != null) {
-            filesList = new String[files.length / 2];
-            int count = 0;
+            filesList = new String[files.length];
             for (int i = 0; i < files.length; i++) {
-                System.out.println(files[i]);
                 String file = files[i].getName().split("\\.")[0];
-                if (!Arrays.asList(filesList).contains(file)) {
-                    filesList[count] = file;
-                    count++;
-                }
+                System.out.println(file);
+                filesList[i] = file;
             }
         } else {
             filesList = new String[0];

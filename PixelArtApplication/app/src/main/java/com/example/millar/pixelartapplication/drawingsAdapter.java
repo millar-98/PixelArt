@@ -58,19 +58,25 @@ public class drawingsAdapter extends ArrayAdapter<String> {
             public void onClick(View view) {
                 String dir = context.getFilesDir().getAbsolutePath() + "/Drawings/";
 
-                // Delete both the txt and png files
+                // Delete the txt file
                 File textFile = new File(dir, fileName + ".txt");
-                File pngFile = new File(dir, fileName + ".png");
                 boolean textFileDeleted = textFile.delete();
-                boolean pngFileDeleted = pngFile.delete();
 
                 // Handle the event of a deletion failing
-                if(!textFileDeleted || !pngFileDeleted) {
+                if(!textFileDeleted) {
                     System.out.println("Delete was unsuccessful");
                 } else {
                     Activity activity = (Activity) context;
                     activity.recreate();
                 }
+            }
+        });
+
+        ImageButton renameButton = listItem.findViewById(R.id.rename);
+        renameButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+
             }
         });
 

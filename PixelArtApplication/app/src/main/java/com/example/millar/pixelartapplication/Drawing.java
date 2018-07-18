@@ -1,5 +1,6 @@
 package com.example.millar.pixelartapplication;
 
+import android.content.Intent;
 import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.graphics.Point;
@@ -24,19 +25,18 @@ import java.util.ArrayList;
 public class Drawing extends AppCompatActivity {
     // Layouts
     ConstraintLayout mainLayout;
-    ConstraintLayout Canvas;
 
     // Views
     FloatingActionButton colourPickerButton;
     FloatingActionButton saveButton;
     FloatingActionButton toolsButton;
     FloatingActionButton clearCanvasButton;
-    FloatingActionButton showGridButton;
     FloatingActionButton fillToolButton;
     FloatingActionButton cancelEyeDropperButton;
     FloatingActionButton centerCanvasButton;
     FloatingActionButton eraserButton;
-    TextView clearCanvasText;
+    FloatingActionButton homeButton;
+    FloatingActionButton shapes;
 
     Point displayPoint;
 
@@ -44,10 +44,11 @@ public class Drawing extends AppCompatActivity {
 
     // Drawing
     ArrayList drawQueue;
-    Pixels pixels;
+    Pixels2 pixels;
     int colour;
     boolean erase;
     int offset;
+    float defaultZoom;
 
     // Tools
     boolean canDraw;
@@ -95,17 +96,16 @@ public class Drawing extends AppCompatActivity {
 
         // Find views
         mainLayout = findViewById(R.id.mainLayout);
-        Canvas = findViewById(R.id.layout);
         colourPickerButton = findViewById(R.id.colourPickerButton);
         saveButton = findViewById(R.id.save);
         toolsButton = findViewById(R.id.Tools);
         clearCanvasButton = findViewById(R.id.clearCanvas);
-        clearCanvasText = findViewById(R.id.clearCanvasText);
         fillToolButton = findViewById(R.id.fillTool);
-        showGridButton = findViewById(R.id.showGrid);
         cancelEyeDropperButton = findViewById(R.id.cancelEyeDropper);
         centerCanvasButton = findViewById(R.id.centerCanvas);
         eraserButton = findViewById(R.id.eraser);
+        homeButton = findViewById(R.id.home);
+        shapes = findViewById(R.id.shapes);
 
         eyeDropper = new EyeDropper(this, colour);
         mainLayout.addView(eyeDropper);
@@ -117,21 +117,23 @@ public class Drawing extends AppCompatActivity {
             // Loading saved drawing
             saved = true;
             fileName = parameters.getString("FileName");
-            pixels = new Pixels(this, fileName);
+            pixels = new Pixels2(this, fileName);
         } else {
             // Creating new drawing
-            pixels = new Pixels(this, parameters.getInt("backgroundColour"), parameters.getInt("width"),
-                    parameters.getInt("height"), parameters.getInt("size"));
+            pixels = new Pixels2(this, parameters.getInt("backgroundColour"), parameters.getInt("width"),
+                    parameters.getInt("height"), parameters.getInt("size"), 0);
             saved = false;
         }
-        Canvas.addView(pixels);
+        mainLayout.addView(pixels);
 
         final Display display = getWindowManager().getDefaultDisplay();
         displayPoint = new Point();
         display.getSize(displayPoint);
         offset = ((displayPoint.x) - (pixels.getSize()*pixels.getPixelsWidth()))/2;
+//        defaultZoom = (float) displayPoint.x / (pixels.getSize()*pixels.getPixelsWidth());
+        defaultZoom = 1;
 
-        centerCanvasButton.callOnClick();
+        centerCanvas();
 
         // pixels onTouchListener
         pixels.setOnTouchListener(new View.OnTouchListener() {
@@ -170,8 +172,8 @@ public class Drawing extends AppCompatActivity {
                             ydiff /= 1.5;
 
                             // Move the canvas
-                            Canvas.setX(Canvas.getX() + xdiff);
-                            Canvas.setY(Canvas.getY() + ydiff);
+                            pixels.setX(pixels.getX() + xdiff);
+                            pixels.setY(pixels.getY() + ydiff);
 
                             // Set previous coordinates
                             previousCoord_panning[0] = motionEvent.getX();
@@ -181,16 +183,16 @@ public class Drawing extends AppCompatActivity {
                             // Work out the distance between the fingers
                             double distance = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
                             if (scale) {
-                                if(Canvas.getScaleX() >= 1) {
+                                if(pixels.getScaleX() >= defaultZoom) {
                                     double difference = distance - previousDistance;
                                     double scaleChange = difference / 1000;
-                                    Canvas.setScaleX(Canvas.getScaleX() + (float) scaleChange);
-                                    Canvas.setScaleY(Canvas.getScaleY() + (float) scaleChange);
+                                    pixels.setScaleX(pixels.getScaleX() + (float) scaleChange);
+                                    pixels.setScaleY(pixels.getScaleY() + (float) scaleChange);
                                 }
 
-                                if(Canvas.getScaleX() < 1) {
-                                    Canvas.setScaleX(1);
-                                    Canvas.setScaleY(1);
+                                if(pixels.getScaleX() < defaultZoom) {
+                                    pixels.setScaleX(defaultZoom);
+                                    pixels.setScaleY(defaultZoom);
                                 }
                             } else {
                                 scale = true;
@@ -465,20 +467,16 @@ public class Drawing extends AppCompatActivity {
                 toolsVisible = !toolsVisible;
                 if(toolsVisible) {
                     clearCanvasButton.setVisibility(View.VISIBLE);
-                    clearCanvasText.setVisibility(View.VISIBLE);
                     fillToolButton.setVisibility(View.VISIBLE);
-                    showGridButton.setVisibility(View.VISIBLE);
                     centerCanvasButton.setVisibility(View.VISIBLE);
-                    eraserButton.setVisibility(View.VISIBLE);
+                    shapes.setVisibility(View.VISIBLE);
 
                     toolsButton.setBackgroundTintList(ColorStateList.valueOf(getResources().getColor(R.color.colorPrimaryDark)));
                 } else {
                     clearCanvasButton.setVisibility(View.INVISIBLE);
-                    clearCanvasText.setVisibility(View.INVISIBLE);
                     fillToolButton.setVisibility(View.INVISIBLE);
-                    showGridButton.setVisibility(View.INVISIBLE);
                     centerCanvasButton.setVisibility(View.INVISIBLE);
-                    eraserButton.setVisibility(View.INVISIBLE);
+                    shapes.setVisibility(View.INVISIBLE);
 
                     toolsButton.setBackgroundTintList(ColorStateList.valueOf(getResources().getColor(R.color.colorAccent)));
                 }
@@ -505,19 +503,6 @@ public class Drawing extends AppCompatActivity {
             }
         });
 
-        showGridButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                if(pixels.showGrid) {
-                    pixels.removeGrid();
-                    showGridButton.setBackgroundTintList(ColorStateList.valueOf(getResources().getColor(R.color.colorAccent)));
-                } else {
-                    pixels.drawGrid();
-                    showGridButton.setBackgroundTintList(ColorStateList.valueOf(getResources().getColor(R.color.colorPrimaryDark)));
-                }
-            }
-        });
-
         cancelEyeDropperButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -532,10 +517,7 @@ public class Drawing extends AppCompatActivity {
         centerCanvasButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                Canvas.setScaleX(1);
-                Canvas.setScaleY(1);
-                Canvas.setX(offset);
-                Canvas.setY(offset);
+                centerCanvas();
             }
         });
 
@@ -550,6 +532,64 @@ public class Drawing extends AppCompatActivity {
                 }
             }
         });
+
+        homeButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                finish();
+                startActivity(new Intent(view.getContext(), MainMenu.class));
+            }
+        });
+
+        shapes.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                LayoutInflater inflater = (LayoutInflater) Drawing.this.getSystemService(LAYOUT_INFLATER_SERVICE);
+                final View customView = inflater.inflate(R.layout.shapes_popup_window, null);
+
+                int width = (int) Math.round(displayPoint.x * 0.8);
+                int height = (int) Math.round(displayPoint.y * 0.5);
+
+                final PopupWindow popupWindow = new PopupWindow(customView, width, height, true);
+
+                Button square = customView.findViewById(R.id.squareShape);
+                Button circle = customView.findViewById(R.id.circleShape);
+                Button line = customView.findViewById(R.id.lineShape);
+                Button cross = customView.findViewById(R.id.crossShape);
+
+                square.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View view) {
+                        pixels.setShape(0);
+                    }
+                });
+                circle.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View view) {
+                        pixels.setShape(1);
+                    }
+                });
+                line.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View view) {
+                        pixels.setShape(2);
+                    }
+                });
+                cross.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View view) {
+                        pixels.setShape(3);
+                    }
+                });
+
+                popupWindow.showAtLocation(mainLayout, Gravity.CENTER, 0, 0);
+            }
+        });
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
     }
 
     public void changeColors(boolean fingerUp) {
@@ -617,5 +657,12 @@ public class Drawing extends AppCompatActivity {
                 }
             }
         }
+    }
+
+    public void centerCanvas() {
+        pixels.setScaleX(defaultZoom);
+        pixels.setScaleY(defaultZoom);
+        pixels.setX(offset);
+        pixels.setY(offset);
     }
 }

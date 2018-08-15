@@ -17,7 +17,6 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.PopupWindow;
 import android.widget.TabHost;
-import android.widget.TextView;
 
 import java.lang.Math;
 import java.util.ArrayList;
@@ -44,7 +43,7 @@ public class Drawing extends AppCompatActivity {
 
     // Drawing
     ArrayList drawQueue;
-    Pixels2 pixels;
+    Pixels pixels;
     int colour;
     boolean erase;
     int offset;
@@ -107,24 +106,24 @@ public class Drawing extends AppCompatActivity {
         homeButton = findViewById(R.id.home);
         shapes = findViewById(R.id.shapes);
 
-        eyeDropper = new EyeDropper(this, colour);
-        mainLayout.addView(eyeDropper);
-        eyeDropper.setVisibility(View.INVISIBLE);
-
         // Get passed parameters
         Bundle parameters = getIntent().getExtras();
         if(parameters.getBoolean("Loading")) {
             // Loading saved drawing
             saved = true;
             fileName = parameters.getString("FileName");
-            pixels = new Pixels2(this, fileName);
+            pixels = new Pixels(this, fileName);
         } else {
             // Creating new drawing
-            pixels = new Pixels2(this, parameters.getInt("backgroundColour"), parameters.getInt("width"),
+            pixels = new Pixels(this, parameters.getInt("backgroundColour"), parameters.getInt("width"),
                     parameters.getInt("height"), parameters.getInt("size"), 0);
             saved = false;
         }
+
         mainLayout.addView(pixels);
+        eyeDropper = new EyeDropper(this, colour);
+        mainLayout.addView(eyeDropper);
+        eyeDropper.setVisibility(View.INVISIBLE);
 
         final Display display = getWindowManager().getDefaultDisplay();
         displayPoint = new Point();
